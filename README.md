@@ -27,6 +27,10 @@
 
 ## 🚀 快速开始
 
+### 🌐 在线访问
+
+直接访问：https://spuerworms.github.io/mathtools
+
 ### 安装与运行
 
 ```bash
@@ -101,7 +105,7 @@ python -m http.server 8000
 - 学习进度统计
 - 知识点薄弱项分析
 
-## �📄 许可证
+## �� 许可证
 
 MIT License
 

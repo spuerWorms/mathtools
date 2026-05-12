@@ -1,0 +1,1924 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数学计算器</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✏️</text></svg>" type="image/svg+xml">
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            min-height: 100vh;
+            padding: 20px;
+            color: #fff;
+        }
+
+        .container {
+            display: flex;
+            gap: 0;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* 左侧导航栏 */
+        .sidebar {
+            width: 70px;
+            background: #2a2a2a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0;
+            transition: width 0.3s ease;
+            overflow: hidden;
+            border-radius: 8px 0 0 8px;
+        }
+
+        .sidebar.expanded {
+            width: 180px;
+        }
+
+        .sidebar-toggle {
+            width: 44px;
+            height: 44px;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            color: #666;
+            font-size: 32px;
+            cursor: pointer;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .sidebar-toggle:hover {
+            background: #3a3a3a;
+            color: #fff;
+        }
+
+        .nav-items {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+            padding: 0 8px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 12px 8px;
+            background: #3a3a3a;
+            border: none;
+            border-radius: 6px;
+            color: #888;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+        }
+
+        .nav-item:hover {
+            background: #4a4a4a;
+            color: #fff;
+            transform: translateX(8px);
+        }
+
+        .nav-item.active {
+            background: #3a3a3a;
+            color: #fff;
+        }
+
+        .nav-icon {
+            font-size: 24px;
+            flex-shrink: 0;
+            width: 28px;
+            text-align: center;
+        }
+
+        .nav-label {
+            display: none;
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .sidebar.expanded .nav-label {
+            display: inline;
+        }
+
+        .left-panel {
+            flex: 1;
+            padding: 20px;
+            background: #1a1a1a;
+        }
+
+        .right-panel {
+            width: 350px;
+            background: #1a1a1a;
+            border-radius: 0 8px 8px 0;
+            padding: 20px;
+        }
+
+        .main-content {
+            display: flex;
+            flex: 1;
+            gap: 30px;
+            background: #1a1a1a;
+            border-radius: 0 8px 8px 0;
+            min-height: calc(100vh - 40px);
+        }
+
+        .calculator-layout {
+            display: flex;
+            flex: 1;
+            gap: 30px;
+        }
+
+        .symbols-page {
+            flex: 1;
+            padding: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            padding: 10px 25px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #3a3a3a;
+            color: #fff;
+        }
+
+        .tab-btn.active {
+            background: #2e7d32;
+            color: #fff;
+        }
+
+        .tab-btn:hover:not(.active) {
+            background: #4a4a4a;
+        }
+
+        .clear-btn {
+            position: absolute;
+            right: 80px;
+            top: 0;
+            padding: 10px 30px;
+            background: #e53935;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .clear-btn:hover {
+            background: #c62828;
+        }
+
+        .header-row {
+            position: relative;
+            margin-bottom: 20px;
+            padding-right: 120px;
+            max-width: 520px;
+        }
+
+        /* 口算模式样式 */
+        .calc-row {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 8px;
+        }
+
+        .calc-input {
+            width: 170px;
+            padding: 12px 15px;
+            background: #3a3a3a;
+            border: 1px solid #4a4a4a;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 18px;
+            letter-spacing: 2px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .calc-input:focus {
+            border-color: #2e7d32;
+        }
+
+        .calc-operator {
+            font-size: 24px;
+            color: #fff;
+            width: 30px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .eq-btn {
+            width: 45px;
+            height: 44px;
+            background: #3a3a3a;
+            border: 1px solid #4a4a4a;
+            border-radius: 6px;
+            color: #888;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-left: 5px;
+        }
+
+        .eq-btn:hover {
+            background: #4a4a4a;
+        }
+
+        .eq-btn.disabled {
+            background: #333;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .result-row {
+            display: flex;
+            align-items: flex-start;
+            background: #1b5e20;
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            width: calc(100% - 60px);
+            max-width: 450px;
+            position: relative;
+        }
+
+        .equation-result {
+            padding: 15px 15px;
+            width: calc(100% - 60px);
+            max-width: 500px;
+            box-sizing: border-box;
+        }
+
+        .simplify-tag {
+            position: absolute;
+            top: 8px;
+            right: 15px;
+            font-size: 18px;
+            color: #fff;
+            font-family: "YouYuan", "幼圆", "Microsoft YaHei", sans-serif;
+        }
+
+        .equation-result .copy-btn {
+            position: absolute;
+            bottom: 8px;
+            right: 15px;
+        }
+
+        .result-text {
+            font-size: 16px;
+            color: #fff;
+            letter-spacing: 2px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            padding-right: 70px;
+        }
+
+        .copy-btn {
+            padding: 6px 15px;
+            background: #3a3a3a;
+            border: none;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .result-row:not(.equation-result) .copy-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            margin-left: auto;
+        }
+
+        .basic-result {
+            width: 430px;
+            max-width: 430px;
+        }
+
+        .copy-btn:hover {
+            background: #4a4a4a;
+        }
+
+        /* 综合模式样式 */
+        .dropdowns {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .dropdown {
+            padding: 10px 15px;
+            background: #3a3a3a;
+            border: 1px solid #4a4a4a;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            outline: none;
+            min-width: 120px;
+            width: 120px;
+            max-height: 300px;
+        }
+
+        .dropdown::-webkit-scrollbar {
+            display: none;
+        }
+
+        .dropdown {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .dropdown option:nth-child(odd) {
+            background: #3a3a3a;
+        }
+
+        .dropdown option:nth-child(even) {
+            background: #4a4a4a;
+        }
+
+        .operators {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .op-btn {
+            width: 45px;
+            height: 45px;
+            background: #3a3a3a;
+            border: 1px solid #4a4a4a;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .op-btn:hover {
+            background: #4a4a4a;
+        }
+
+        .bracket-btn {
+            width: 45px;
+            font-size: 18px;
+        }
+
+        .expr-input {
+            width: calc(100% - 60px);
+            max-width: 500px;
+            padding: 12px 15px;
+            background: #3a3a3a;
+            border: 1px solid #4a4a4a;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 18px;
+            letter-spacing: 2px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .expr-input:focus {
+            border-color: #2e7d32;
+        }
+
+        .expr-row {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        /* 历史记录样式 */
+        .history-panel {
+            background: #2a2a2a;
+            border-radius: 8px;
+            overflow: hidden;
+            width: 330px;
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 1px solid #3a3a3a;
+        }
+
+        .history-title {
+            color: #2e7d32;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .history-add-btn {
+            width: 28px;
+            height: 28px;
+            background: transparent;
+            border: 1px solid #2e7d32;
+            border-radius: 50%;
+            color: #2e7d32;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .history-add-btn:hover {
+            background: #2e7d32;
+            color: #fff;
+        }
+
+        .history-list {
+            padding: 10px;
+            max-height: 400px;
+            overflow-y: hidden;
+        }
+
+        .history-item {
+            padding: 12px 15px;
+            background: #3a3a3a;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .history-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .copied-badge {
+            font-size: 11px;
+            color: #67c23a;
+            margin-left: 10px;
+        }
+
+        /* 符号大全样式 */
+        .symbols-page {
+            padding: 20px;
+            height: calc(100vh - 80px);
+        }
+
+        .symbols-panel {
+            display: flex;
+            height: 100%;
+        }
+
+        .symbols-sidebar {
+            width: 120px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-right: 20px;
+        }
+
+        .category-tab {
+            padding: 15px;
+            background: #3a3a3a;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #fff;
+            text-align: center;
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .category-tab:hover {
+            background: #4a4a4a;
+        }
+
+        .category-tab.active {
+            background: #2e7d32;
+        }
+
+        .symbols-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow-y: auto;
+        }
+
+        .category-grid {
+            background: #2a2a2a;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .symbol-grid {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 0;
+        }
+
+        .symbol-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 15px;
+            background: #3a3a3a;
+            border: 1px solid #2a2a2a;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #fff;
+            aspect-ratio: 1;
+            border-radius: 6px;
+        }
+
+        .symbol-item:hover {
+            background: #4a4a4a;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                flex-direction: row;
+                justify-content: flex-start;
+                padding: 10px 20px;
+                border-radius: 8px 8px 0 0;
+            }
+            .sidebar.expanded {
+                width: 100%;
+            }
+            .sidebar-toggle {
+                display: none;
+            }
+            .nav-items {
+                flex-direction: row;
+                padding: 0;
+            }
+            .nav-item {
+                justify-content: center;
+                min-width: 100px;
+            }
+            .nav-label {
+                display: inline;
+            }
+            .main-content {
+                flex-direction: column;
+                border-radius: 0 0 8px 8px;
+                min-height: auto;
+            }
+            .calculator-layout {
+                flex-direction: column;
+            }
+            .right-panel {
+                width: 100%;
+                border-radius: 0;
+            }
+            .symbols-page {
+                padding: 20px;
+            }
+            .header-row {
+                padding-right: 0;
+            }
+            .clear-btn {
+                position: static;
+                margin-top: 10px;
+            }
+            .tabs {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <!-- 左侧导航栏 -->
+            <div class="sidebar" :class="{ expanded: sidebarExpanded }">
+                <button class="sidebar-toggle" @click="sidebarExpanded = !sidebarExpanded">
+                    {{ sidebarExpanded ? '‹' : '›' }}
+                </button>
+                <div class="nav-items">
+                    <button 
+                        class="nav-item" 
+                        :class="{ active: currentNav === 'calculator' }"
+                        @click="currentNav = 'calculator'"
+                    >
+                        <span class="nav-icon">🧮</span>
+                        <span class="nav-label">计算器</span>
+                    </button>
+                    <button 
+                        class="nav-item" 
+                        :class="{ active: currentNav === 'symbols' }"
+                        @click="currentNav = 'symbols'"
+                    >
+                        <span class="nav-icon">⚙️</span>
+                        <span class="nav-label">符号大全</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 主内容区域 -->
+            <div class="main-content">
+                <!-- 计算器页面 -->
+                <div v-show="currentNav === 'calculator'" class="calculator-layout">
+                    <div class="left-panel">
+                        <div class="header-row">
+                            <div class="tabs">
+                                <button 
+                                    class="tab-btn" 
+                                    :class="{ active: activeTab === 'basic' }"
+                                    @click="activeTab = 'basic'"
+                                >口算</button>
+                                <button 
+                                    class="tab-btn" 
+                                    :class="{ active: activeTab === 'advanced' }"
+                                    @click="activeTab = 'advanced'"
+                                >综合</button>
+                                <button 
+                                    class="tab-btn" 
+                                    :class="{ active: activeTab === 'equation' }"
+                                    @click="activeTab = 'equation'"
+                                >递等式／方程</button>
+                            </div>
+                            <button class="clear-btn" @click="clearAll">清除</button>
+                        </div>
+
+                        <!-- 口算模式 -->
+                        <div v-show="activeTab === 'basic'">
+                            <!-- 除法 -->
+                            <div class="calc-row">
+                                <input type="text" class="calc-input" v-model="basic.dividend" placeholder="被除数" @input="validateInput('dividend', 'basic')">
+                                <span class="calc-operator">÷</span>
+                                <input type="text" class="calc-input" v-model="basic.divisor" placeholder="除数" @input="validateInput('divisor', 'basic')">
+                                <button class="eq-btn" @click="calculateDivision">=</button>
+                            </div>
+                            <div v-if="basic.dividend && basic.divisor" class="result-row basic-result">
+                                <span class="result-text">{{ basic.results.division || '结果：' }}</span>
+                                <button class="copy-btn" @click="copyResult('division')">{{ copied.division ? '已复制' : '复制' }}</button>
+                            </div>
+
+                            <!-- 乘法 -->
+                            <div class="calc-row">
+                                <input type="text" class="calc-input" v-model="basic.multiplicand" placeholder="被乘数" @input="validateInput('multiplicand', 'basic')">
+                                <span class="calc-operator">×</span>
+                                <input type="text" class="calc-input" v-model="basic.multiplier" placeholder="乘数" @input="validateInput('multiplier', 'basic')">
+                                <button class="eq-btn" @click="calculateMultiplication">=</button>
+                            </div>
+                            <div v-if="basic.multiplicand && basic.multiplier" class="result-row basic-result">
+                                <span class="result-text">{{ basic.results.multiplication || '结果：' }}</span>
+                                <button class="copy-btn" @click="copyResult('multiplication')">{{ copied.multiplication ? '已复制' : '复制' }}</button>
+                            </div>
+
+                            <!-- 加法 -->
+                            <div class="calc-row">
+                                <input type="text" class="calc-input" v-model="basic.addend1" placeholder="加数1" @input="validateInput('addend1', 'basic')">
+                                <span class="calc-operator">+</span>
+                                <input type="text" class="calc-input" v-model="basic.addend2" placeholder="加数2" @input="validateInput('addend2', 'basic')">
+                                <button class="eq-btn" @click="calculateAddition">=</button>
+                            </div>
+                            <div v-if="basic.addend1 && basic.addend2" class="result-row basic-result">
+                                <span class="result-text">{{ basic.results.addition || '结果：' }}</span>
+                                <button class="copy-btn" @click="copyResult('addition')">{{ copied.addition ? '已复制' : '复制' }}</button>
+                            </div>
+
+                            <!-- 减法 -->
+                            <div class="calc-row">
+                                <input type="text" class="calc-input" v-model="basic.minuend" placeholder="被减数" @input="validateInput('minuend', 'basic')">
+                                <span class="calc-operator">−</span>
+                                <input type="text" class="calc-input" v-model="basic.subtrahend" placeholder="减数" @input="validateInput('subtrahend', 'basic')">
+                                <button class="eq-btn" @click="calculateSubtraction">=</button>
+                            </div>
+                            <div v-if="basic.minuend && basic.subtrahend" class="result-row basic-result">
+                                <span class="result-text">{{ basic.results.subtraction || '结果：' }}</span>
+                                <button class="copy-btn" @click="copyResult('subtraction')">{{ copied.subtraction ? '已复制' : '复制' }}</button>
+                            </div>
+                        </div>
+
+                        <!-- 综合模式 -->
+                        <div v-show="activeTab === 'advanced'">
+                    <div class="dropdowns">
+                        <select class="dropdown" v-model="selectedUnit1" @change="onUnitChange(1)">
+                            <option value="长度面积">长度面积</option>
+                            <option value="(厘米)">厘米</option>
+            <option value="(分米)">分米</option>
+            <option value="(米)">米</option>
+            <option value="(千米)">千米</option>
+            <option value="(平方厘米)">平方厘米</option>
+            <option value="(平方分米)">平方分米</option>
+            <option value="(平方米)">平方米</option>
+            <option value="(平方千米)">平方千米</option>
+            <option value="(立方厘米)">立方厘米</option>
+            <option value="(立方分米)">立方分米</option>
+            <option value="(立方米)">立方米</option>
+                 <option value="(名)">名</option> 
+            <option value="(盒)">盒</option>
+                        </select>
+                        <select class="dropdown" v-model="selectedUnit2" @change="onUnitChange(2)">
+                            <option value="重量容积时间">重量容积时间</option>
+                            <option value="(克)">克</option>
+            <option value="(千克)">千克</option>
+            <option value="(吨)">吨</option>
+            <option value="(毫升)">毫升</option>
+            <option value="(升)">升</option>
+            <option value="(时)">时</option>
+            <option value="(分钟)">分钟</option>  
+            <option value="(米/分)">米/分</option>
+            <option value="(千米/时)">千米/时</option>
+                       <option value="(盏)">盏</option>
+           <option value="(组)">组</option>
+           <option value="(朵)">朵</option>
+           <option value="(环)">环</option> 
+           <option value="(下)">下</option>
+           <option value="(度)">度</option>
+           <option value="(页)">页</option>
+           <option value="(圈)">圈</option>   
+           <option value="(件)">件</option>  
+           <option value="(幅)">幅</option>  
+                        </select>
+                        <select class="dropdown" v-model="selectedUnit3" @change="onUnitChange(3)">
+                            <option value="其他常用">其他常用</option>
+                            <option value="(元)">元</option>
+            <option value="(棵)">棵</option>
+            <option value="(人)">人</option>
+            <option value="(箱)">箱</option>
+            <option value="(袋)">袋</option>
+            <option value="(天)">天</option>
+            <option value="(岁)">岁</option>  
+            <option value="(本)">本</option>
+            <option value="(位)">位</option>
+            <option value="(辆)">辆</option>
+            <option value="(包)">包</option>  
+            <option value="(个)">个</option>
+            <option value="(只)">只</option>  
+            <option value="(条)">条</option>    
+            <option value="(颗)">颗</option>  
+            <option value="(组)">组</option> 
+            <option value="(张)">张</option> 
+            <option value="(台)">台</option>
+            <option value="(块)">块</option>
+            <option value="(盏)">盏</option>
+                        </select>
+                    </div>
+
+                    <div class="operators">
+                        <button class="op-btn" v-for="op in operators" :key="op" @click="appendToExpr(op)">{{ op }}</button>
+                        <button class="op-btn bracket-btn" @click="appendBracket('(')">(</button>
+                        <button class="op-btn bracket-btn" @click="appendBracket(')')">)</button>
+                        <button class="op-btn bracket-btn" @click="appendBracket('[')">[</button>
+                        <button class="op-btn bracket-btn" @click="appendBracket(']')">]</button>
+                    </div>
+
+                    <div class="expr-row">
+                        <input type="text" ref="exprInput" class="expr-input" v-model="advanced.expression" @input="validateAndCalculate" placeholder="输入表达式，如：12+34×56">
+                        <button class="eq-btn" @click="calculateExpression">=</button>
+                    </div>
+                    <div v-if="advanced.result" class="result-row" style="margin-top: 8px; width: calc(100% - 60px); max-width: 500px;">
+                        <span class="result-text">{{ advanced.result }}</span>
+                        <button class="copy-btn" @click="copyResult('expression')">{{ copied.expression ? '已复制' : '复制' }}</button>
+                    </div>
+                </div>
+
+                <!-- 递等式模式 -->
+                <div v-show="activeTab === 'equation'">
+                    <div class="operators">
+                        <button class="op-btn" v-for="op in operators" :key="op" @click="appendToEquation(op)">{{ op }}</button>
+                        <button class="op-btn bracket-btn" @click="appendEquationBracket('(')">(</button>
+                        <button class="op-btn bracket-btn" @click="appendEquationBracket(')')">)</button>
+                        <button class="op-btn bracket-btn" @click="appendEquationBracket('[')">[</button>
+                        <button class="op-btn bracket-btn" @click="appendEquationBracket(']')">]</button>
+                    </div>
+                    <div class="expr-row">
+                        <input ref="eqInput" type="text" class="expr-input" v-model="equation.expression" @input="handleEquationInput" @focus="focusedInput = 'eqInput'" placeholder="输入递等式...">
+                        <button class="eq-btn" @click="calculateEquation">=</button>
+                    </div>
+                    <div v-if="equation.result" class="result-row equation-result" style="margin-top: 8px;">
+                        <span v-if="equation.hasSimplify" class="simplify-tag">简便计算</span>
+                        <span class="result-text">{{ equation.result }}</span>
+                        <button class="copy-btn" @click="copyEquationResult">{{ copied.equation ? '已复制' : '复制' }}</button>
+                    </div>
+                    
+                    <div class="expr-row" style="margin-top: 15px;">
+                        <input ref="equationInput" type="text" class="expr-input" v-model="equation.eqExpression" @input="handleEquationInput" @focus="focusedInput = 'equationInput'" placeholder="解方程，如：2x+5=15">
+                        <button class="eq-btn" @click="solveEquation">解</button>
+                    </div>
+                    <div v-if="equation.eqResult" class="result-row equation-result" style="margin-top: 8px;">
+                        <span class="result-text">{{ equation.eqResult }}</span>
+                        <button class="copy-btn" @click="copyEquationResult('eq')">{{ copied.eq ? '已复制' : '复制' }}</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 历史记录面板 -->
+                            <div v-if="activeTab === 'basic' || activeTab === 'advanced'" class="right-panel">
+                                <div class="history-panel">
+                                    <div class="history-header">
+                                        <span class="history-title">历史记录</span>
+                                        <button class="history-add-btn" @click="addToHistory()">+</button>
+                                    </div>
+                                    <div class="history-list">
+                                        <div v-if="history.length === 0" class="history-item" style="color: #666;">暂无记录</div>
+                                        <div v-for="(item, index) in history" :key="index" class="history-item" @dblclick="copyHistoryItem(item, index)">
+                                            {{ item }}
+                                            <span v-if="copiedHistory[index]" class="copied-badge">已复制</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div> <!-- 关闭 calculator-layout -->
+
+                        <!-- 符号大全页面 -->
+                        <div v-show="currentNav === 'symbols'" class="symbols-page">
+                            <div class="symbols-panel">
+                                <div class="symbols-sidebar">
+                                    <div v-for="(cat, index) in symbolCategories" 
+                                         :key="index"
+                                         :class="['category-tab', { active: selectedCategory === index }]"
+                                         @click="selectedCategory = index">
+                                        {{ cat.name }}
+                                    </div>
+                                </div>
+                                <div class="symbols-content">
+                                    <div v-for="(cat, catIndex) in symbolCategories" :key="catIndex" class="category-grid">
+                                        <template v-if="cat.name === '上下角标'">
+                                            <div class="symbol-grid">
+                                                <span v-for="(sym, symIndex) in cat.symbols.slice(10)" 
+                                                      :key="symIndex" 
+                                                      class="symbol-item"
+                                                      @click="copySymbol(sym)">
+                                                    {{ sym }}
+                                                </span>
+                                            </div>
+                                            <div class="symbol-grid">
+                                                <span v-for="(sym, symIndex) in cat.symbols.slice(0, 10)" 
+                                                      :key="symIndex" 
+                                                      class="symbol-item"
+                                                      @click="copySymbol(sym)">
+                                                    {{ sym }}
+                                                </span>
+                                            </div>
+                                        </template>
+                                        <template v-else>
+                                            <div class="symbol-grid">
+                                                <span v-for="(sym, symIndex) in cat.symbols" 
+                                                      :key="symIndex" 
+                                                      class="symbol-item"
+                                                      @click="copySymbol(sym)">
+                                                    {{ sym }}
+                                                </span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div> <!-- 关闭 main-content -->
+        </div> <!-- 关闭 container -->
+    </div>
+
+    <script>
+        new Vue({
+            el: '#app',
+            data() {
+                return {
+                    sidebarExpanded: false,
+                    currentNav: 'calculator',
+                    activeTab: 'basic',
+                    selectedCategory: 0,
+                    symbolCategories: [
+                        { name: '数学序号', symbols: ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫','⑬','⑭','⑮','⑯','⑰','⑱','⑲','⑳'] },
+                        { name: '特殊符号', symbols: ['★','♦','■','●','▲','▼','♥','◎','☆','◇','□','○','△','▽','♡','®'] },
+                        { name: '数学/单位', symbols: ['π','°','℃','||','%','±','≈','≠','∞','~','∴','∵','∏','′','″','↑','↓','←','→','·'] },
+                        { name: '上下角标', symbols: ['₀','₁','₂','₃','₄','₅','₆','₇','₈','₉','⁰','¹','²','³','⁴','⁵','⁶','⁷','⁸','⁹'] }
+                    ],
+                    copied: {
+                        division: false,
+                        multiplication: false,
+                        addition: false,
+                        subtraction: false,
+                        expression: false,
+                        equation: false,
+                        eq: false
+                    },
+                    basic: {
+                        dividend: '',
+                        divisor: '',
+                        multiplicand: '',
+                        multiplier: '',
+                        addend1: '',
+                        addend2: '',
+                        minuend: '',
+                        subtrahend: '',
+                        results: {
+                            division: '',
+                            multiplication: '',
+                            addition: '',
+                            subtraction: ''
+                        }
+                    },
+                    advanced: {
+                        expression: '',
+                        result: ''
+                    },
+                    equation: {
+                        expression: '',
+                        result: '',
+                        hasSimplify: false,
+                        eqExpression: '',
+                        eqResult: ''
+                    },
+                    focusedInput: '',
+                    operators: ['+', '−', '×', '÷'],
+                    history: [],
+                    copiedHistory: [],
+                    selectedUnit1: '长度面积',
+                    selectedUnit2: '重量容积时间',
+                    selectedUnit3: '其他常用'
+                }
+            },
+            methods: {
+                formatNumber(num) {
+                    if (typeof num !== 'number') return num;
+                    if (Number.isInteger(num)) return num.toString();
+                    const str = num.toString();
+                    if (str.includes('e')) return num.toString();
+                    if (str.includes('.')) {
+                        const parts = str.split('.');
+                        const decimals = parts[1];
+                        if (decimals.length <= 10) {
+                            const trimmed = parseFloat(num.toPrecision(12));
+                            return trimmed.toString();
+                        }
+                    }
+                    const rounded = Math.round(num * 10000000000) / 10000000000;
+                    return rounded.toString();
+                },
+                onUnitChange(selected) {
+                    const defaults = { 1: '长度面积', 2: '重量容积时间', 3: '其他常用' };
+                    const unitMap = { 1: 'selectedUnit1', 2: 'selectedUnit2', 3: 'selectedUnit3' };
+                    const otherKeys = Object.keys(defaults).filter(k => parseInt(k) !== selected);
+                    
+                    otherKeys.forEach(key => {
+                        this[unitMap[key]] = defaults[key];
+                    });
+                    
+                    this.validateAndCalculate();
+                },
+                copySymbol(symbol) {
+                        navigator.clipboard.writeText(symbol).then(() => {
+                            const temp = symbol;
+                            symbol = '✓';
+                            setTimeout(() => {
+                                symbol = temp;
+                            }, 1000);
+                        });
+                    },
+                    clearAll() {
+                    if (this.activeTab === 'basic') {
+                        // 清除口算模式
+                        this.basic.dividend = '';
+                        this.basic.divisor = '';
+                        this.basic.multiplicand = '';
+                        this.basic.multiplier = '';
+                        this.basic.addend1 = '';
+                        this.basic.addend2 = '';
+                        this.basic.minuend = '';
+                        this.basic.subtrahend = '';
+                        this.basic.results = {
+                            division: '',
+                            multiplication: '',
+                            addition: '',
+                            subtraction: ''
+                        };
+                    } else {
+                        // 清除综合模式
+                        this.advanced.expression = '';
+                        this.advanced.result = '';
+                        this.selectedUnit1 = '长度面积';
+                        this.selectedUnit2 = '重量容积时间';
+                        this.selectedUnit3 = '其他常用';
+                        // 清除递等式模式
+                        this.equation.expression = '';
+                        this.equation.result = '';
+                        // 清除方程模式
+                        this.equation.eqExpression = '';
+                        this.equation.eqResult = '';
+                        this.equation.hasSimplify = false;
+                    }
+                },
+                calculateDivision() {
+                    const dividend = parseFloat(this.basic.dividend);
+                    const divisor = parseFloat(this.basic.divisor);
+                    
+                    if (isNaN(dividend) || isNaN(divisor)) {
+                        this.basic.results.division = '结果：请输入有效数字';
+                        return;
+                    }
+                    
+                    if (divisor === 0) {
+                        this.basic.results.division = '结果：除数不能为0';
+                        return;
+                    }
+
+                    const quotient = Math.floor(dividend / divisor);
+                    let remainder = dividend % divisor;
+                    let expression;
+                    
+                    remainder = parseFloat(remainder.toFixed(10));
+                    
+                    if (Math.abs(remainder) > 0.0000000001) {
+                        expression = `结果：${dividend} ÷ ${divisor} = ${this.formatNumber(quotient)}......${this.formatNumber(remainder)}`;
+                    } else {
+                        expression = `结果：${dividend} ÷ ${divisor} = ${this.formatNumber(quotient)}`;
+                    }
+                    
+                    this.basic.results.division = expression;
+                },
+                calculateMultiplication() {
+                    const multiplicand = parseFloat(this.basic.multiplicand);
+                    const multiplier = parseFloat(this.basic.multiplier);
+                    
+                    if (isNaN(multiplicand) || isNaN(multiplier)) {
+                        this.basic.results.multiplication = '结果：请输入有效数字';
+                        return;
+                    }
+
+                    const result = multiplicand * multiplier;
+                    const expression = `结果：${multiplicand} × ${multiplier} = ${this.formatNumber(result)}`;
+                    this.basic.results.multiplication = expression;
+                },
+                calculateAddition() {
+                    const addend1 = parseFloat(this.basic.addend1);
+                    const addend2 = parseFloat(this.basic.addend2);
+                    
+                    if (isNaN(addend1) || isNaN(addend2)) {
+                        this.basic.results.addition = '结果：请输入有效数字';
+                        return;
+                    }
+
+                    const result = addend1 + addend2;
+                    const expression = `结果：${addend1} + ${addend2} = ${this.formatNumber(result)}`;
+                    this.basic.results.addition = expression;
+                },
+                calculateSubtraction() {
+                    const minuend = parseFloat(this.basic.minuend);
+                    const subtrahend = parseFloat(this.basic.subtrahend);
+                    
+                    if (isNaN(minuend) || isNaN(subtrahend)) {
+                        this.basic.results.subtraction = '结果：请输入有效数字';
+                        return;
+                    }
+
+                    const result = minuend - subtrahend;
+                    const expression = `结果：${minuend} − ${subtrahend} = ${this.formatNumber(result)}`;
+                    this.basic.results.subtraction = expression;
+                },
+                appendToExpr(op) {
+                    const input = this.$refs.exprInput;
+                    const start = input.selectionStart;
+                    const end = input.selectionEnd;
+                    const text = this.advanced.expression;
+                    const newText = text.substring(0, start) + op + text.substring(end);
+                    this.advanced.expression = newText;
+                    this.$nextTick(() => {
+                        input.selectionStart = input.selectionEnd = start + op.length;
+                        input.focus();
+                    });
+                },
+                appendBracket(br) {
+                    const pairs = {
+                        '(': '()',
+                        ')': '()',
+                        '[': '[]',
+                        ']': '[]'
+                    };
+                    const input = this.$refs.exprInput;
+                    const start = input.selectionStart;
+                    const end = input.selectionEnd;
+                    const text = this.advanced.expression;
+                    const pair = pairs[br];
+                    const newText = text.substring(0, start) + pair + text.substring(end);
+                    this.advanced.expression = newText;
+                    this.$nextTick(() => {
+                        input.selectionStart = input.selectionEnd = start + 1;
+                        input.focus();
+                    });
+                },
+                appendEquationBracket(br) {
+                    const pairs = {
+                        '(': '()',
+                        ')': '()',
+                        '[': '[]',
+                        ']': '[]'
+                    };
+                    const eqInput = this.$refs.eqInput;
+                    const equationInput = this.$refs.equationInput;
+                    
+                    // 使用记录的焦点状态
+                    let input, text, propName;
+                    if (this.focusedInput === 'equationInput') {
+                        input = equationInput;
+                        text = this.equation.eqExpression;
+                        propName = 'eqExpression';
+                    } else {
+                        input = eqInput;
+                        text = this.equation.expression;
+                        propName = 'expression';
+                    }
+                    
+                    const start = input ? input.selectionStart : 0;
+                    const end = input ? input.selectionEnd : 0;
+                    const pair = pairs[br];
+                    const newText = text.substring(0, start) + pair + text.substring(end);
+                    this.equation[propName] = newText;
+                    if (input) {
+                        this.$nextTick(() => {
+                            input.selectionStart = input.selectionEnd = start + 1;
+                            input.focus();
+                        });
+                    }
+                },
+                appendToEquation(op) {
+                    const eqInput = this.$refs.eqInput;
+                    const equationInput = this.$refs.equationInput;
+                    
+                    // 使用记录的焦点状态
+                    let input, text, propName;
+                    if (this.focusedInput === 'equationInput') {
+                        input = equationInput;
+                        text = this.equation.eqExpression;
+                        propName = 'eqExpression';
+                    } else {
+                        input = eqInput;
+                        text = this.equation.expression;
+                        propName = 'expression';
+                    }
+                    
+                    const start = input ? input.selectionStart : 0;
+                    const end = input ? input.selectionEnd : 0;
+                    const newText = text.substring(0, start) + op + text.substring(end);
+                    this.equation[propName] = newText;
+                    if (input) {
+                        this.$nextTick(() => {
+                            input.selectionStart = input.selectionEnd = start + op.length;
+                            input.focus();
+                        });
+                    }
+                },
+                validateExpression() {
+                    const input = this.$refs.exprInput;
+                    let cursorPos = 0;
+                    if (input) {
+                        cursorPos = input.selectionStart;
+                    }
+                    
+                    const originalLength = this.advanced.expression.length;
+                    // 将半角减号转换为全角减号
+                    this.advanced.expression = this.advanced.expression.replace(/-/g, '−').replace(/[^0-9+−*/×÷.()[\]]/g, '');
+                    
+                    if (input) {
+                        const newLength = this.advanced.expression.length;
+                        const diff = newLength - originalLength;
+                        const newCursorPos = Math.min(cursorPos + diff, newLength);
+                        this.$nextTick(() => {
+                            input.selectionStart = input.selectionEnd = newCursorPos;
+                            input.focus();
+                        });
+                    }
+                },
+                validateAndCalculate() {
+                    this.validateExpression();
+                    const expr = this.advanced.expression;
+                    if (!expr.trim()) {
+                        this.advanced.result = '';
+                        return;
+                    }
+
+                    const validation = this.isValidExpression(expr);
+                    if (!validation.valid) {
+                        this.advanced.result = validation.message;
+                        return;
+                    }
+
+                    try {
+                        const sanitizedExpr = expr.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-');
+                        const result = eval(sanitizedExpr);
+                        if (isNaN(result) || !isFinite(result)) {
+                            this.advanced.result = '表达式计算错误';
+                            return;
+                        }
+                        // 将半角符号转换为全角符号
+                        const fullWidthExpr = expr.replace(/-/g, '−').replace(/=/g, '＝');
+                        const expression = `结果：${fullWidthExpr} ＝ ${this.formatNumber(result)}`;
+                        this.advanced.result = expression;
+                    } catch (e) {
+                        this.advanced.result = '表达式格式错误';
+                    }
+                },
+                calculateExpression() {
+                    const expr = this.advanced.expression;
+                    if (!expr.trim()) {
+                        this.advanced.result = '';
+                        return;
+                    }
+
+                    const validation = this.isValidExpression(expr);
+                    if (!validation.valid) {
+                        this.advanced.result = validation.message;
+                        return;
+                    }
+
+                    try {
+                        const sanitizedExpr = expr.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-');
+                        const result = eval(sanitizedExpr);
+                        if (isNaN(result) || !isFinite(result)) {
+                            this.advanced.result = '表达式计算错误';
+                            return;
+                        }
+                        // 将半角符号转换为全角符号
+                        const fullWidthExpr = expr.replace(/-/g, '−').replace(/=/g, '＝');
+                        const expression = `结果：${fullWidthExpr} ＝ ${this.formatNumber(result)}`;
+                        this.advanced.result = expression;
+                    } catch (e) {
+                        this.advanced.result = '表达式格式错误';
+                    }
+                },
+                isValidExpression(expr) {
+                    // 检查空表达式
+                    if (!expr || !expr.trim()) {
+                        return { valid: false, message: '请输入表达式' };
+                    }
+                    
+                    const sanitized = expr.replace(/[×÷−]/g, (m) => ({ '×': '*', '÷': '/', '−': '-' }[m]));
+                    
+                    // 检查连续运算符
+                    if (sanitized.includes('()') || sanitized.includes('[]')) {
+                        return { valid: false, message: '括号不能为空' };
+                    }
+                    
+                    // 检查连续运算符
+                    if (/[+\-*/]{2,}/.test(sanitized)) {
+                        return { valid: false, message: '不能有连续运算符' };
+                    }
+                    
+                    // 检查开头和结尾
+                    if (/^[*/]/.test(sanitized)) {
+                        return { valid: false, message: '表达式不能以乘除开头' };
+                    }
+                    if (/[+\-*/]$/.test(sanitized)) {
+                        return { valid: false, message: '表达式不能以运算符结尾' };
+                    }
+                    
+                    // 检查括号匹配
+                    let parens = 0, brackets = 0;
+                    for (const ch of sanitized) {
+                        if (ch === '(') parens++;
+                        else if (ch === ')') parens--;
+                        else if (ch === '[') brackets++;
+                        else if (ch === ']') brackets--;
+                        if (parens < 0 || brackets < 0) {
+                            return { valid: false, message: '括号不匹配' };
+                        }
+                    }
+                    if (parens !== 0 || brackets !== 0) {
+                        return { valid: false, message: '括号未闭合' };
+                    }
+                    
+                    // 检查小数点格式（连续小数点或数字后直接跟小数点再跟运算符等）
+                    // 检查连续小数点如 1..2
+                    if (/\.\./.test(sanitized)) {
+                        return { valid: false, message: '数字格式不正确' };
+                    }
+                    // 检查小数点前后必须有数字
+                    if (/(^|[^\d.])\./.test(sanitized) || /\.(?=$|[^\d])/.test(sanitized)) {
+                        // 允许括号内的小数点如 (.5 或 5.)
+                        if (!/\(\.\d/.test(sanitized) && !/\d\.\)/.test(sanitized)) {
+                            return { valid: false, message: '数字格式不正确' };
+                        }
+                    }
+                    
+                    return { valid: true, message: '' };
+                },
+                copyResult(type) {
+                    let text = '';
+                    if (type === 'expression') {
+                        text = this.advanced.result.replace('结果：', '');
+                        const defaults = ['长度面积', '重量容积时间', '其他常用'];
+                        const units = [this.selectedUnit1, this.selectedUnit2, this.selectedUnit3];
+                        const selectedUnit = units.find(u => !defaults.includes(u));
+                        if (selectedUnit) {
+                            text += ' ' + selectedUnit;
+                        }
+                    } else {
+                        text = this.basic.results[type].replace('结果：', '');
+                    }
+
+                    if (!text) return;
+
+                    navigator.clipboard.writeText(text).then(() => {
+                        this.copied[type] = true;
+                        this.addToHistory(text);
+                        setTimeout(() => {
+                            this.copied[type] = false;
+                        }, 2000);
+                    });
+                },
+                handleEquationInput() {
+                    // 判断当前焦点在哪个输入框
+                    const exprInput = this.$refs.eqInput;
+                    const eqInput = this.$refs.equationInput;
+                    const isExprFocused = exprInput === document.activeElement;
+                    const isEqFocused = eqInput === document.activeElement;
+                    
+                    // 处理递等式输入框光标位置
+                    let exprCursorPos = 0;
+                    if (exprInput) {
+                        exprCursorPos = exprInput.selectionStart;
+                    }
+                    const originalExprLength = this.equation.expression.length;
+                    
+                    // 过滤递等式输入（只允许数字和运算符，同时支持全角和半角减号）
+                    const validChars = /[0-9+\-−×÷().\[\] ]/;
+                    let filtered = '';
+                    for (const char of this.equation.expression) {
+                        if (validChars.test(char)) {
+                            filtered += char;
+                        }
+                    }
+                    // 将半角减号转换为全角减号
+                    filtered = filtered.replace(/-/g, '−');
+                    
+                    // 计算光标位置变化
+                    let newExprCursorPos = exprCursorPos;
+                    if (filtered !== this.equation.expression) {
+                        this.equation.expression = filtered;
+                        const newExprLength = filtered.length;
+                        const exprDiff = newExprLength - originalExprLength;
+                        newExprCursorPos = Math.min(exprCursorPos + exprDiff, newExprLength);
+                    }
+                    
+                    // 恢复递等式输入框光标位置（只在当前焦点时恢复）
+                    if (exprInput && isExprFocused) {
+                        setTimeout(() => {
+                            exprInput.selectionStart = exprInput.selectionEnd = newExprCursorPos;
+                            exprInput.focus();
+                        }, 0);
+                    }
+                    
+                    // 处理方程输入框光标位置
+                    let eqCursorPos = 0;
+                    if (eqInput) {
+                        eqCursorPos = eqInput.selectionStart;
+                    }
+                    const originalEqLength = this.equation.eqExpression.length;
+                    
+                    // 过滤方程输入（允许数字、运算符和未知数x/y，同时支持全角和半角减号）
+                    const eqValidChars = /[0-9+\-−×÷().\[\]=xyXY ]/;
+                    let eqFiltered = '';
+                    for (const char of this.equation.eqExpression) {
+                        if (eqValidChars.test(char)) {
+                            eqFiltered += char;
+                        }
+                    }
+                    // 将半角减号转换为全角减号
+                    eqFiltered = eqFiltered.replace(/-/g, '−');
+                    
+                    // 计算光标位置变化
+                    let newEqCursorPos = eqCursorPos;
+                    if (eqFiltered !== this.equation.eqExpression) {
+                        this.equation.eqExpression = eqFiltered;
+                        const eqDiff = eqFiltered.length - originalEqLength;
+                        newEqCursorPos = Math.min(eqCursorPos + eqDiff, eqFiltered.length);
+                    }
+                    
+                    // 恢复方程输入框光标位置（只在当前焦点时恢复）
+                    if (eqInput && isEqFocused) {
+                        setTimeout(() => {
+                            eqInput.selectionStart = eqInput.selectionEnd = newEqCursorPos;
+                            eqInput.focus();
+                        }, 0);
+                    }
+                    
+                    this.calculateEquation();
+                    this.solveEquation();
+                },
+                calculateEquation() {
+                    const expr = this.equation.expression;
+                    if (!expr.trim()) {
+                        this.equation.result = '';
+                        return;
+                    }
+
+                    if (!this.isValidEquation(expr)) {
+                        this.equation.result = '表达式不合规';
+                        return;
+                    }
+
+                    try {
+                        const sanitizedExpr = expr.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-');
+                        const result = eval(sanitizedExpr);
+                        if (isNaN(result) || !isFinite(result)) {
+                            this.equation.result = '表达式不合规';
+                            return;
+                        }
+
+                        const steps = this.generateEquationSteps(expr, result);
+                        // 将结果中的半角符号转换为全角符号
+                        const fullWidthSteps = steps.replace(/-/g, '−').replace(/=/g, '＝');
+                        this.equation.result = fullWidthSteps;
+                    } catch (e) {
+                        this.equation.result = '表达式不合规';
+                    }
+                },
+                solveEquation() {
+                    const expr = this.equation.eqExpression;
+                    if (!expr.trim()) {
+                        this.equation.eqResult = '';
+                        return;
+                    }
+
+                    // 验证方程合规性
+                    if (!this.isValidEquationInput(expr)) {
+                        this.equation.eqResult = '方程不合规';
+                        return;
+                    }
+
+                    if (!expr.includes('=')) {
+                        this.equation.eqResult = '请输入方程（包含=）';
+                        return;
+                    }
+
+                    try {
+                        const [left, right] = expr.split('=').map(s => s.trim());
+                        
+                        // 处理以0开头的数字（避免八进制解析问题）
+                        const processNumber = (str) => {
+                            // 匹配以0开头但不是单独0的数字（考虑负号、运算符、括号等情况）
+                            let result = str;
+                            // 处理括号后的0开头数字，如 (098
+                            result = result.replace(/\(0(\d+)/g, '($1');
+                            // 处理运算符后的0开头数字，如 +098, -098, *098, /098（同时支持全角和半角减号）
+                            result = result.replace(/([+\-−×÷])0(\d+)/g, '$1$2');
+                            // 处理开头的0开头数字
+                            result = result.replace(/^0(\d+)/g, '$1');
+                            return result;
+                        };
+                        
+                        const processedLeft = processNumber(left);
+                        const processedRight = processNumber(right);
+                        
+                        // 将全角符号转换为半角符号用于计算
+                        const rightExpr = processedRight.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-');
+                        const rightResult = eval(rightExpr);
+                        
+                        // 检查未知数是x还是y
+                        const hasX = /x/i.test(processedLeft);
+                        const hasY = /y/i.test(processedLeft);
+                        const variable = hasX ? 'x' : (hasY ? 'y' : '');
+                        
+                        if (!variable) {
+                            this.equation.eqResult = '未找到未知数x或y';
+                            return;
+                        }
+
+                        // 提取所有变量项并计算总系数
+                        let coef = 0;
+                        let leftWithoutVar = processedLeft;
+                        
+                        // 匹配所有变量项，包括数字、括号表达式、以及数字乘括号的组合
+                        const varPattern = new RegExp(`([+\\-−]?)\\s*(\\d*\\.?\\d*\\s*\\([^)]+\\)|\\([^)]+\\)|\\d*\\.?\\d*)?\\s*${variable}`, 'gi');
+                        let match;
+                        while ((match = varPattern.exec(processedLeft)) !== null) {
+                            const sign = match[1] === '-' || match[1] === '−' ? -1 : 1;
+                            const coefStr = match[2];
+                            
+                            let termCoef = 1;
+                            if (coefStr && coefStr !== '') {
+                                if (coefStr.includes('(')) {
+                                    // 处理括号表达式作为系数（包括数字乘括号的情况）
+                                    const bracketExprHalfWidth = coefStr.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-');
+                                    termCoef = eval(bracketExprHalfWidth);
+                                } else {
+                                    termCoef = parseFloat(coefStr);
+                                    if (isNaN(termCoef)) termCoef = 1;
+                                }
+                            }
+                            
+                            coef += sign * termCoef;
+                        }
+                        
+                        // 如果没有找到变量项，系数默认为1
+                        if (coef === 0) coef = 1;
+                        
+                        // 移除所有变量项
+                        leftWithoutVar = processedLeft.replace(new RegExp(`[+\\-−]?\\s*(\\d*\\.?\\d*\\s*\\([^)]+\\)|\\([^)]+\\)|\\d*\\.?\\d*)?\\s*${variable}`, 'gi'), '');
+                        
+                        // 计算常数项
+                        const leftConst = (leftWithoutVar && leftWithoutVar.trim()) ? eval(leftWithoutVar.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-')) : 0;
+
+                        const solution = (rightResult - leftConst) / coef;
+                        // 将结果中的半角符号转换为全角符号
+                        const fullWidthResult = `解：${expr}\n${variable} ＝ ${this.formatNumber(solution)}`.replace(/-/g, '−');
+                        this.equation.eqResult = fullWidthResult;
+                    } catch (e) {
+                        this.equation.eqResult = '方程格式错误';
+                    }
+                },
+                isValidEquationInput(expr) {
+                    // 检查连续运算符（同时支持全角和半角减号）
+                    if (/[+\-−×÷=]{2,}/.test(expr)) return false;
+                    
+                    // 检查以乘除开头
+                    if (/^[×÷]/.test(expr)) return false;
+                    
+                    // 检查括号匹配
+                    let count = 0;
+                    for (const char of expr) {
+                        if (char === '(') count++;
+                        if (char === ')') count--;
+                        if (count < 0) return false;
+                    }
+                    if (count !== 0) return false;
+                    
+                    // 检查中括号匹配
+                    count = 0;
+                    for (const char of expr) {
+                        if (char === '[') count++;
+                        if (char === ']') count--;
+                        if (count < 0) return false;
+                    }
+                    if (count !== 0) return false;
+                    
+                    // 检查等号数量
+                    const equalsCount = (expr.match(/=/g) || []).length;
+                    if (equalsCount !== 1) return false;
+                    
+                    return true;
+                },
+                trySimplify(expr) {
+                    // 分配律: a×b + a×c = a×(b+c)
+                    const distMatch = expr.match(/(\d+\.?\d*)\s*×\s*(\d+\.?\d*)\s*\+\s*(\d+\.?\d*)\s*×\s*(\d+\.?\d*)/);
+                    if (distMatch) {
+                        const a1 = parseFloat(distMatch[1]);
+                        const b = parseFloat(distMatch[2]);
+                        const a2 = parseFloat(distMatch[3]);
+                        const c = parseFloat(distMatch[4]);
+                        if (a1 === a2) {
+                            return `${a1}×(${b}+${c})`;
+                        }
+                    }
+
+                    // 逆分配律: a×b - a×c = a×(b-c)
+                    const distSubMatch = expr.match(/(\d+\.?\d*)\s*×\s*(\d+\.?\d*)\s*−\s*(\d+\.?\d*)\s*×\s*(\d+\.?\d*)/);
+                    if (distSubMatch) {
+                        const a1 = parseFloat(distSubMatch[1]);
+                        const b = parseFloat(distSubMatch[2]);
+                        const a2 = parseFloat(distSubMatch[3]);
+                        const c = parseFloat(distSubMatch[4]);
+                        if (a1 === a2) {
+                            return `${a1}×(${b}−${c})`;
+                        }
+                    }
+
+                    // 乘法结合律: 125×32×25 = (125×8)×(4×25)
+                    const multiMatch = expr.match(/(\d+\.?\d*)\s*×\s*(\d+\.?\d*)\s*×\s*(\d+\.?\d*)/);
+                    if (multiMatch) {
+                        const a = parseFloat(multiMatch[1]);
+                        const b = parseFloat(multiMatch[2]);
+                        const c = parseFloat(multiMatch[3]);
+                        
+                        // 检查是否包含125和25
+                        const nums = [a, b, c];
+                        const has125 = nums.includes(125);
+                        const has25 = nums.includes(25);
+                        
+                        if (has125 && has25) {
+                            // 找到中间数
+                            let middleNum;
+                            if (b === 125 || b === 25) {
+                                middleNum = a === 125 || a === 25 ? c : a;
+                            } else {
+                                middleNum = b;
+                            }
+                            
+                            // 尝试拆分中间数
+                            const split = this.splitForSimplify(middleNum);
+                            if (split) {
+                                const idx1 = nums.indexOf(125);
+                                const idx2 = nums.indexOf(25);
+                                const idx3 = 3 - idx1 - idx2;
+                                const num3 = nums[idx3];
+                                
+                                return `(${125}×${split[0]})×(${split[1]}×${25})`;
+                            }
+                        }
+                    }
+
+                    // 结合律: a+b+c = a+(b+c) 当b+c为整十/整百
+                    const addMatch = expr.match(/(\d+\.?\d*)\s*\+\s*(\d+\.?\d*)\s*\+\s*(\d+\.?\d*)/);
+                    if (addMatch) {
+                        const a = parseFloat(addMatch[1]);
+                        const b = parseFloat(addMatch[2]);
+                        const c = parseFloat(addMatch[3]);
+                        if ((b + c) % 10 === 0 || (b + c) % 100 === 0) {
+                            return `${a}+(${b}+${c})`;
+                        }
+                        if ((a + c) % 10 === 0 || (a + c) % 100 === 0) {
+                            return `${b}+(${a}+${c})`;
+                        }
+                    }
+
+                    // 处理括号内的减法性质: (a-b-c) = (a-(b+c)) - 优先检查
+                    const parenSubMatch = expr.match(/\((\d+\.?\d*)\s*−\s*(\d+\.?\d*)\s*−\s*(\d+\.?\d*)\)/);
+                    if (parenSubMatch) {
+                        const a = parseFloat(parenSubMatch[1]);
+                        const b = parseFloat(parenSubMatch[2]);
+                        const c = parseFloat(parenSubMatch[3]);
+                        const inner = `${a}−(${b}+${c})`;
+                        return expr.replace(/\((\d+\.?\d*)\s*−\s*(\d+\.?\d*)\s*−\s*(\d+\.?\d*)\)/, `(${inner})`);
+                    }
+                    
+                    // 减法性质: a-b-c = a-(b+c)（仅当不在括号内时应用）
+                    const subMatch = expr.match(/(?:^|[^)])\s*(\d+\.?\d*)\s*−\s*(\d+\.?\d*)\s*−\s*(\d+\.?\d*)(?![^(]*\))/);
+                    if (subMatch) {
+                        const a = parseFloat(subMatch[1]);
+                        const b = parseFloat(subMatch[2]);
+                        const c = parseFloat(subMatch[3]);
+                        return `${a}−(${b}+${c})`;
+                    }
+
+                    // 除法性质: a÷b÷c = a÷(b×c)
+                    const divMatch = expr.match(/(\d+\.?\d*)\s*÷\s*(\d+\.?\d*)\s*÷\s*(\d+\.?\d*)/);
+                    if (divMatch) {
+                        const a = parseFloat(divMatch[1]);
+                        const b = parseFloat(divMatch[2]);
+                        const c = parseFloat(divMatch[3]);
+                        // 检查是否可以简化（如25×4=100）
+                        const product = b * c;
+                        if (product % 10 === 0 || product % 100 === 0 || product % 1000 === 0) {
+                            return `${a}÷(${b}×${c})`;
+                        }
+                    }
+
+                    return null;
+                },
+                splitForSimplify(num) {
+                    // 尝试将数字拆分为可以与125和25配对的因子
+                    const pairs = [
+                        [8, 4],   // 32 = 8×4
+                        [16, 2],  // 32 = 16×2
+                        [4, 8],   // 32 = 4×8
+                        [2, 16],  // 32 = 2×16
+                    ];
+                    
+                    for (const pair of pairs) {
+                        if (pair[0] * pair[1] === num) {
+                            return pair;
+                        }
+                    }
+                    
+                    // 尝试其他拆分方式
+                    for (let i = 2; i <= Math.sqrt(num); i++) {
+                        if (num % i === 0) {
+                            return [i, num / i];
+                        }
+                    }
+                    
+                    return null;
+                },
+                isValidEquation(expr) {
+                    // 检查空括号
+                    if (/\(\)/.test(expr) || /\[\]/.test(expr)) return false;
+                    
+                    // 检查连续运算符（同时支持全角和半角减号）
+                    if (/[+\-−×÷]{2,}/.test(expr)) return false;
+                    
+                    // 检查以乘除开头
+                    if (/^[×÷]/.test(expr)) return false;
+                    
+                    // 检查以运算符结尾（同时支持全角和半角减号）
+                    if (/[+\-−×÷]$/.test(expr)) return false;
+                    
+                    // 检查括号匹配
+                    let count = 0;
+                    for (const char of expr) {
+                        if (char === '(') count++;
+                        if (char === ')') count--;
+                        if (count < 0) return false;
+                    }
+                    if (count !== 0) return false;
+                    
+                    // 检查中括号匹配
+                    count = 0;
+                    for (const char of expr) {
+                        if (char === '[') count++;
+                        if (char === ']') count--;
+                        if (count < 0) return false;
+                    }
+                    if (count !== 0) return false;
+                    
+                    return true;
+                },
+                generateEquationSteps(originalExpr, finalResult) {
+                    let steps = `${originalExpr}\n`;
+                    let currentExpr = originalExpr;
+                    let stepCount = 0;
+                    const maxSteps = 10;
+
+                    // 优先尝试简便计算
+                    const simplified = this.trySimplify(currentExpr);
+                    if (simplified && simplified !== currentExpr) {
+                        this.equation.hasSimplify = true;
+                        steps += `= ${simplified}\n`;
+                        currentExpr = simplified;
+                    } else {
+                        this.equation.hasSimplify = false;
+                    }
+
+                    while (stepCount < maxSteps) {
+                        let matched = false;
+                        const regex = /(\d+\.?\d*)\s*([×÷])\s*(\d+\.?\d*)/;
+                        const match = currentExpr.match(regex);
+                        
+                        if (match) {
+                            const num1 = parseFloat(match[1]);
+                            const op = match[2];
+                            const num2 = parseFloat(match[3]);
+                            let partialResult;
+
+                            if (op === '×') partialResult = num1 * num2;
+                            else partialResult = num1 / num2;
+
+                            let replaced = currentExpr.replace(regex, this.formatNumber(partialResult));
+                            // 去掉不必要的括号
+                            replaced = replaced.replace(/\((\d+\.?\d*)\)/g, '$1');
+                            steps += `= ${replaced}\n`;
+                            currentExpr = replaced;
+                            matched = true;
+                            stepCount++;
+                        } else {
+                            const addRegex = /(\d+\.?\d*)\s*([+−])\s*(\d+\.?\d*)/;
+                            const addMatch = currentExpr.match(addRegex);
+                            if (addMatch) {
+                                const num1 = parseFloat(addMatch[1]);
+                                const op = addMatch[2];
+                                const num2 = parseFloat(addMatch[3]);
+                                let partialResult;
+
+                                if (op === '+') partialResult = num1 + num2;
+                                else partialResult = num1 - num2;
+
+                                let replaced = currentExpr.replace(addRegex, this.formatNumber(partialResult));
+                                // 去掉不必要的括号
+                                replaced = replaced.replace(/\((\d+\.?\d*)\)/g, '$1');
+                                steps += `= ${replaced}\n`;
+                                currentExpr = replaced;
+                                matched = true;
+                                stepCount++;
+                            }
+                        }
+
+                        if (!matched) break;
+                    }
+
+                    if (currentExpr !== this.formatNumber(finalResult)) {
+                        steps += `= ${this.formatNumber(finalResult)}`;
+                    }
+
+                    return steps;
+                },
+                copyEquationResult(type = 'equation') {
+                    let text = '';
+                    // 检查是否是事件对象，如果是则使用默认值 'equation'
+                    if (type && type.type) {
+                        type = 'equation';
+                    }
+                    if (type === 'equation') {
+                        text = this.equation.result;
+                    } else {
+                        text = this.equation.eqResult;
+                    }
+                    if (!text) return;
+                    
+                    const vm = this;
+                    
+                    // 优先使用 Clipboard API
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(text).then(function() {
+                            vm.copied[type] = true;
+                            vm.addToHistory(text);
+                            setTimeout(function() {
+                                vm.copied[type] = false;
+                            }, 2000);
+                        }).catch(function(err) {
+                            console.error('Clipboard API 复制失败:', err);
+                            vm.fallbackCopy(text, type);
+                        });
+                    } else {
+                        vm.fallbackCopy(text, type);
+                    }
+                },
+                fallbackCopy(text, type = 'equation') {
+                    const vm = this;
+                    const textarea = document.createElement('textarea');
+                    textarea.value = text;
+                    textarea.style.position = 'fixed';
+                    textarea.style.left = '-9999px';
+                    textarea.style.top = '-9999px';
+                    document.body.appendChild(textarea);
+                    
+                    textarea.focus();
+                    textarea.select();
+                    
+                    try {
+                        const successful = document.execCommand('copy');
+                        if (successful) {
+                            vm.copied[type] = true;
+                            vm.addToHistory(text);
+                            setTimeout(function() {
+                                vm.copied[type] = false;
+                            }, 2000);
+                        }
+                    } catch (err) {
+                        console.error('回退复制失败:', err);
+                    } finally {
+                        document.body.removeChild(textarea);
+                    }
+                },
+                addToHistory(expression = '') {
+                    if (expression && !this.history.includes(expression)) {
+                        this.history.unshift(expression);
+                        if (this.history.length > 20) {
+                            this.history.pop();
+                        }
+                    }
+                },
+                copyHistoryItem(item, index) {
+                    navigator.clipboard.writeText(item).then(() => {
+                        this.$set(this.copiedHistory, index, true);
+                        setTimeout(() => {
+                            this.$set(this.copiedHistory, index, false);
+                        }, 2000);
+                    });
+                },
+                validateInput(field, section) {
+                    if (section === 'basic') {
+                        this.basic[field] = this.basic[field].replace(/[^0-9.\-+*/]/g, '');
+                        this.realTimeCalculate();
+                    }
+                },
+                realTimeCalculate() {
+                    this.calculateDivision();
+                    this.calculateMultiplication();
+                    this.calculateAddition();
+                    this.calculateSubtraction();
+                }
+            }
+        })
+    </script>
+</body>
+</html>

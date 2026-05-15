@@ -577,6 +577,11 @@
             background: #4a4a4a;
         }
 
+        .symbol-item.copied {
+            background: #2e7d32;
+            color: #fff;
+        }
+
         /* 响应式设计 */
         @media (max-width: 768px) {
             .container {
@@ -889,8 +894,9 @@
                                                 <span v-for="(sym, symIndex) in cat.symbols.slice(10)" 
                                                       :key="symIndex" 
                                                       class="symbol-item"
+                                                      :class="{ copied: lastCopiedSymbol === sym }"
                                                       @click="copySymbol(sym)">
-                                                    {{ sym }}
+                                                    {{ lastCopiedSymbol === sym ? '✓' : sym }}
                                                 </span>
                                             </div>
                                             <div class="symbol-grid">
@@ -907,8 +913,9 @@
                                                 <span v-for="(sym, symIndex) in cat.symbols" 
                                                       :key="symIndex" 
                                                       class="symbol-item"
+                                                      :class="{ copied: lastCopiedSymbol === sym }"
                                                       @click="copySymbol(sym)">
-                                                    {{ sym }}
+                                                    {{ lastCopiedSymbol === sym ? '✓' : sym }}
                                                 </span>
                                             </div>
                                         </template>
@@ -977,25 +984,91 @@
                     copiedHistory: [],
                     selectedUnit1: '长度面积',
                     selectedUnit2: '重量容积时间',
-                    selectedUnit3: '其他常用'
+                    selectedUnit3: '其他常用',
+                    lastCopiedSymbol: ''
                 }
             },
             methods: {
                 formatNumber(num) {
                     if (typeof num !== 'number') return num;
                     if (Number.isInteger(num)) return num.toString();
-                    const str = num.toString();
-                    if (str.includes('e')) return num.toString();
-                    if (str.includes('.')) {
-                        const parts = str.split('.');
-                        const decimals = parts[1];
-                        if (decimals.length <= 10) {
-                            const trimmed = parseFloat(num.toPrecision(12));
-                            return trimmed.toString();
+                    return parseFloat(num.toPrecision(12)).toString();
+                },
+                safeEvaluate(expr) {
+                    // 处理隐式乘法：数字后跟括号 或 括号后跟括号
+                    expr = expr.replace(/(\d)\(/g, '$1*(').replace(/\)\(/g, ')*(');
+
+                    const tokens = [];
+                    let i = 0;
+                    while (i < expr.length) {
+                        if (/\s/.test(expr[i])) { i++; continue; }
+                        if (/[0-9.]/.test(expr[i])) {
+                            let num = '';
+                            while (i < expr.length && /[0-9.]/.test(expr[i])) {
+                                num += expr[i++];
+                            }
+                            if ((num.match(/\./g) || []).length > 1) throw new Error('数字格式不正确');
+                            tokens.push({ type: 'number', value: parseFloat(num) });
+                        } else if ('+−-×÷*/()[]'.includes(expr[i])) {
+                            tokens.push({ type: 'op', value: expr[i++] });
+                        } else {
+                            throw new Error('包含非法字符');
                         }
                     }
-                    const rounded = Math.round(num * 10000000000) / 10000000000;
-                    return rounded.toString();
+
+                    let pos = 0;
+                    const peek = () => tokens[pos];
+                    const consume = () => tokens[pos++];
+
+                    const parseExpression = () => {
+                        let left = parseTerm();
+                        while (peek() && peek().type === 'op' && (peek().value === '+' || peek().value === '−' || peek().value === '-')) {
+                            const op = consume().value;
+                            const right = parseTerm();
+                            left = op === '+' ? left + right : left - right;
+                        }
+                        return left;
+                    };
+
+                    const parseTerm = () => {
+                        let left = parseFactor();
+                        while (peek() && peek().type === 'op' && (peek().value === '×' || peek().value === '*' || peek().value === '÷' || peek().value === '/')) {
+                            const op = consume().value;
+                            const right = parseFactor();
+                            if (op === '÷' || op === '/') {
+                                if (right === 0) throw new Error('除数不能为0');
+                                left /= right;
+                            } else {
+                                left *= right;
+                            }
+                        }
+                        return left;
+                    };
+
+                    const parseFactor = () => {
+                        if (!peek()) throw new Error('表达式不完整');
+                        if (peek().value === '+' || peek().value === '-' || peek().value === '−') {
+                            const op = consume().value;
+                            const factor = parseFactor();
+                            return op === '+' ? factor : -factor;
+                        }
+                        if (peek().type === 'number') return consume().value;
+                        if (peek().value === '(' || peek().value === '[') {
+                            consume();
+                            const result = parseExpression();
+                            if (!peek() || (peek().value !== ')' && peek().value !== ']')) {
+                                throw new Error('括号不匹配');
+                            }
+                            consume();
+                            return result;
+                        }
+                        throw new Error('表达式格式错误');
+                    };
+
+                    const result = parseExpression();
+                    if (pos !== tokens.length) throw new Error('表达式格式错误');
+                    if (!isFinite(result)) throw new Error('计算结果无效');
+                    return result;
                 },
                 onUnitChange(selected) {
                     const defaults = { 1: '长度面积', 2: '重量容积时间', 3: '其他常用' };
@@ -1010,16 +1083,14 @@
                 },
                 copySymbol(symbol) {
                         navigator.clipboard.writeText(symbol).then(() => {
-                            const temp = symbol;
-                            symbol = '✓';
+                            this.lastCopiedSymbol = symbol;
                             setTimeout(() => {
-                                symbol = temp;
-                            }, 1000);
+                                this.lastCopiedSymbol = '';
+                            }, 1500);
                         });
                     },
                     clearAll() {
                     if (this.activeTab === 'basic') {
-                        // 清除口算模式
                         this.basic.dividend = '';
                         this.basic.divisor = '';
                         this.basic.multiplicand = '';
@@ -1034,17 +1105,15 @@
                             addition: '',
                             subtraction: ''
                         };
-                    } else {
-                        // 清除综合模式
+                    } else if (this.activeTab === 'advanced') {
                         this.advanced.expression = '';
                         this.advanced.result = '';
                         this.selectedUnit1 = '长度面积';
                         this.selectedUnit2 = '重量容积时间';
                         this.selectedUnit3 = '其他常用';
-                        // 清除递等式模式
+                    } else if (this.activeTab === 'equation') {
                         this.equation.expression = '';
                         this.equation.result = '';
-                        // 清除方程模式
                         this.equation.eqExpression = '';
                         this.equation.eqResult = '';
                         this.equation.hasSimplify = false;
@@ -1246,14 +1315,11 @@
 
                     try {
                         const sanitizedExpr = expr.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-');
-                        const result = eval(sanitizedExpr);
-                        if (isNaN(result) || !isFinite(result)) {
-                            this.advanced.result = '表达式计算错误';
-                            return;
-                        }
-                        // 将半角符号转换为全角符号
+                        const result = this.safeEvaluate(sanitizedExpr);
                         const fullWidthExpr = expr.replace(/-/g, '−').replace(/=/g, '＝');
-                        const expression = `结果：${fullWidthExpr} ＝ ${this.formatNumber(result)}`;
+                        // 在结果中显示隐式乘法的乘号
+const displayExpr = fullWidthExpr.replace(/(\d)\(/g, '$1 × (');
+const expression = `结果：${displayExpr} ＝ ${this.formatNumber(result)}`;
                         this.advanced.result = expression;
                     } catch (e) {
                         this.advanced.result = '表达式格式错误';
@@ -1274,14 +1340,11 @@
 
                     try {
                         const sanitizedExpr = expr.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-');
-                        const result = eval(sanitizedExpr);
-                        if (isNaN(result) || !isFinite(result)) {
-                            this.advanced.result = '表达式计算错误';
-                            return;
-                        }
-                        // 将半角符号转换为全角符号
+                        const result = this.safeEvaluate(sanitizedExpr);
                         const fullWidthExpr = expr.replace(/-/g, '−').replace(/=/g, '＝');
-                        const expression = `结果：${fullWidthExpr} ＝ ${this.formatNumber(result)}`;
+                        // 在结果中显示隐式乘法的乘号
+const displayExpr = fullWidthExpr.replace(/(\d)\(/g, '$1 × (');
+const expression = `结果：${displayExpr} ＝ ${this.formatNumber(result)}`;
                         this.advanced.result = expression;
                     } catch (e) {
                         this.advanced.result = '表达式格式错误';
@@ -1460,11 +1523,7 @@
 
                     try {
                         const sanitizedExpr = expr.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-');
-                        const result = eval(sanitizedExpr);
-                        if (isNaN(result) || !isFinite(result)) {
-                            this.equation.result = '表达式不合规';
-                            return;
-                        }
+                        const result = this.safeEvaluate(sanitizedExpr);
 
                         const steps = this.generateEquationSteps(expr, result);
                         // 将结果中的半角符号转换为全角符号
@@ -1497,13 +1556,9 @@
                         
                         // 处理以0开头的数字（避免八进制解析问题）
                         const processNumber = (str) => {
-                            // 匹配以0开头但不是单独0的数字（考虑负号、运算符、括号等情况）
                             let result = str;
-                            // 处理括号后的0开头数字，如 (098
                             result = result.replace(/\(0(\d+)/g, '($1');
-                            // 处理运算符后的0开头数字，如 +098, -098, *098, /098（同时支持全角和半角减号）
                             result = result.replace(/([+\-−×÷])0(\d+)/g, '$1$2');
-                            // 处理开头的0开头数字
                             result = result.replace(/^0(\d+)/g, '$1');
                             return result;
                         };
@@ -1511,13 +1566,9 @@
                         const processedLeft = processNumber(left);
                         const processedRight = processNumber(right);
                         
-                        // 将全角符号转换为半角符号用于计算
-                        const rightExpr = processedRight.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-');
-                        const rightResult = eval(rightExpr);
-                        
                         // 检查未知数是x还是y
-                        const hasX = /x/i.test(processedLeft);
-                        const hasY = /y/i.test(processedLeft);
+                        const hasX = /x/i.test(processedLeft) || /x/i.test(processedRight);
+                        const hasY = /y/i.test(processedLeft) || /y/i.test(processedRight);
                         const variable = hasX ? 'x' : (hasY ? 'y' : '');
                         
                         if (!variable) {
@@ -1525,43 +1576,45 @@
                             return;
                         }
 
-                        // 提取所有变量项并计算总系数
-                        let coef = 0;
-                        let leftWithoutVar = processedLeft;
-                        
-                        // 匹配所有变量项，包括数字、括号表达式、以及数字乘括号的组合
-                        const varPattern = new RegExp(`([+\\-−]?)\\s*(\\d*\\.?\\d*\\s*\\([^)]+\\)|\\([^)]+\\)|\\d*\\.?\\d*)?\\s*${variable}`, 'gi');
-                        let match;
-                        while ((match = varPattern.exec(processedLeft)) !== null) {
-                            const sign = match[1] === '-' || match[1] === '−' ? -1 : 1;
-                            const coefStr = match[2];
+                        // 提取变量系数和常数项（代入法）
+                        const extractTerms = (side) => {
+                            const search = side.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-');
                             
-                            let termCoef = 1;
-                            if (coefStr && coefStr !== '') {
-                                if (coefStr.includes('(')) {
-                                    // 处理括号表达式作为系数（包括数字乘括号的情况）
-                                    const bracketExprHalfWidth = coefStr.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-');
-                                    termCoef = eval(bracketExprHalfWidth);
-                                } else {
-                                    termCoef = parseFloat(coefStr);
-                                    if (isNaN(termCoef)) termCoef = 1;
-                                }
-                            }
+                            // 在变量前插入*（处理隐式乘法：2x → 2*x, (x → *(x)
+                            const insertMul = (expr, varName) => {
+                                return expr.replace(new RegExp(`(\\d|\\))(${varName})`, 'gi'), '$1*$2');
+                            };
                             
-                            coef += sign * termCoef;
-                        }
-                        
-                        // 如果没有找到变量项，系数默认为1
-                        if (coef === 0) coef = 1;
-                        
-                        // 移除所有变量项
-                        leftWithoutVar = processedLeft.replace(new RegExp(`[+\\-−]?\\s*(\\d*\\.?\\d*\\s*\\([^)]+\\)|\\([^)]+\\)|\\d*\\.?\\d*)?\\s*${variable}`, 'gi'), '');
-                        
-                        // 计算常数项
-                        const leftConst = (leftWithoutVar && leftWithoutVar.trim()) ? eval(leftWithoutVar.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-')) : 0;
+                            const exprWithMul = insertMul(search, variable);
+                            
+                            // 代入 variable=1 计算 (系数+常数)
+                            const exprWith1 = exprWithMul.replace(new RegExp(variable, 'gi'), '1');
+                            const valWith1 = this.safeEvaluate(exprWith1);
+                            
+                            // 代入 variable=0 计算 (常数)
+                            const exprWith0 = exprWithMul.replace(new RegExp(variable, 'gi'), '0');
+                            const valWith0 = this.safeEvaluate(exprWith0);
+                            
+                            return {
+                                coef: valWith1 - valWith0,
+                                constVal: valWith0
+                            };
+                        };
 
-                        const solution = (rightResult - leftConst) / coef;
-                        // 将结果中的半角符号转换为全角符号
+                        const leftTerms = extractTerms(processedLeft);
+                        const rightTerms = extractTerms(processedRight);
+
+                        // 净系数 = 左边系数 - 右边系数
+                        const netCoef = leftTerms.coef - rightTerms.coef;
+                        // 净常数 = 右边常数 - 左边常数
+                        const netConst = rightTerms.constVal - leftTerms.constVal;
+
+                        if (netCoef === 0) {
+                            this.equation.eqResult = netConst === 0 ? '方程有无数解' : '方程无解';
+                            return;
+                        }
+
+                        const solution = netConst / netCoef;
                         const fullWidthResult = `解：${expr}\n${variable} ＝ ${this.formatNumber(solution)}`.replace(/-/g, '−');
                         this.equation.eqResult = fullWidthResult;
                     } catch (e) {
@@ -1831,10 +1884,9 @@
 
                     return steps;
                 },
-                copyEquationResult(type = 'equation') {
+                copyEquationResult(type) {
                     let text = '';
-                    // 检查是否是事件对象，如果是则使用默认值 'equation'
-                    if (type && type.type) {
+                    if (typeof type === 'object' || !type) {
                         type = 'equation';
                     }
                     if (type === 'equation') {

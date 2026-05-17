@@ -259,6 +259,37 @@
             background: #4a4a4a;
         }
 
+        .verify-btn {
+            width: 55px;
+            height: 44px;
+            background: #3a3a3a;
+            border: 1px solid #4a4a4a;
+            border-radius: 6px;
+            color: #888;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-left: 5px;
+        }
+
+        .verify-btn:hover:not(:disabled) {
+            background: #4a4a4a;
+            color: #fff;
+        }
+
+        .verify-btn:disabled {
+            background: #333;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .verify-btn.copied {
+            background: #2e7d32;
+            color: #fff;
+            border-color: #2e7d32;
+        }
+
         .eq-btn.disabled {
             background: #333;
             cursor: not-allowed;
@@ -269,7 +300,7 @@
             display: flex;
             align-items: flex-start;
             background: #1b5e20;
-            padding: 10px 15px;
+            padding: 15px 15px;
             border-radius: 6px;
             margin-bottom: 15px;
             width: calc(100% - 60px);
@@ -300,7 +331,7 @@
         }
 
         .result-text {
-            font-size: 16px;
+            font-size: 18px;
             color: #fff;
             letter-spacing: 2px;
             white-space: pre-wrap;
@@ -309,12 +340,12 @@
         }
 
         .copy-btn {
-            padding: 6px 15px;
+            padding: 8px 18px;
             background: #3a3a3a;
             border: none;
             border-radius: 4px;
             color: #fff;
-            font-size: 12px;
+            font-size: 16px;
             cursor: pointer;
             transition: all 0.3s;
         }
@@ -426,6 +457,90 @@
             margin-bottom: 8px;
         }
 
+        .var-expr-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #3a3a3a;
+        }
+
+        .var-expr-title {
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .var-expr-row {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .var-expr-input {
+            width: 80px;
+            padding: 12px 15px;
+            background: #3a3a3a;
+            border: 1px solid #4a4a4a;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 18px;
+            text-align: center;
+            outline: none;
+        }
+
+        .var-expr-input:focus {
+            border-color: #2e7d32;
+        }
+
+        .var-expr-op {
+            padding: 12px 15px;
+            border: 1px solid #4a4a4a;
+            border-radius: 6px;
+            background: #3a3a3a;
+            color: #fff;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .var-expr-op:focus {
+            outline: none;
+            border-color: #2e7d32;
+        }
+
+        .add-input-btn {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 6px;
+            background: #3a3a3a;
+            color: #fff;
+            font-size: 20px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .add-input-btn:hover {
+            background: #4a4a4a;
+        }
+
+        .remove-input-btn {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 6px;
+            background: #c62828;
+            color: #fff;
+            font-size: 20px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .remove-input-btn:hover {
+            background: #e53935;
+        }
+
         /* 历史记录样式 */
         .history-panel {
             background: #2a2a2a;
@@ -470,8 +585,14 @@
 
         .history-list {
             padding: 10px;
-            max-height: 400px;
-            overflow-y: hidden;
+            max-height: 600px;
+            overflow-y: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .history-list::-webkit-scrollbar {
+            display: none;
         }
 
         .history-item {
@@ -500,6 +621,10 @@
         .symbols-page {
             padding: 20px;
             height: calc(100vh - 80px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
         }
 
         .symbols-panel {
@@ -544,6 +669,81 @@
             flex-direction: column;
             gap: 15px;
             overflow-y: auto;
+        }
+
+        .selection-mode {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5px;
+            margin-bottom: 15px;
+            width: 100%;
+            max-width: 600px;
+            position: relative;
+        }
+
+        .mode-tabs-wrapper {
+            display: flex;
+            justify-content: center;
+        }
+
+        .copy-selected-area {
+            position: absolute;
+            right: 5px;
+        }
+
+        .mode-tabs {
+            display: flex;
+            gap: 8px;
+        }
+
+        .mode-tab {
+            padding: 10px 20px;
+            background: #3a3a3a;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #ccc;
+        }
+
+        .mode-tab:hover {
+            background: #4a4a4a;
+        }
+
+        .mode-tab.active {
+            background: #2e7d32;
+            color: #fff;
+        }
+
+        .copy-selected-area {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .copy-all-btn {
+            padding: 8px 16px;
+            background: #2e7d32;
+            border: none;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .copy-all-btn:hover {
+            background: #388e3c;
+        }
+
+        .symbol-item.selected {
+            background: #2e7d32 !important;
+        }
+
+        .symbol-item.copied {
+            background: #1565c0 !important;
         }
 
         .category-grid {
@@ -701,6 +901,7 @@
                                 <span class="calc-operator">÷</span>
                                 <input type="text" class="calc-input" v-model="basic.divisor" placeholder="除数" @input="validateInput('divisor', 'basic')">
                                 <button class="eq-btn" @click="calculateDivision">=</button>
+                                <button v-show="basic.results.division && !basic.results.division.includes('请输入') && !basic.results.division.includes('除数不能为0')" class="verify-btn" :class="{ copied: copied.verify }" @click="verifyDivision">{{ copied.verify ? '已复制' : '验算' }}</button>
                             </div>
                             <div v-if="basic.dividend && basic.divisor" class="result-row basic-result">
                                 <span class="result-text">{{ basic.results.division || '结果：' }}</span>
@@ -713,6 +914,7 @@
                                 <span class="calc-operator">×</span>
                                 <input type="text" class="calc-input" v-model="basic.multiplier" placeholder="乘数" @input="validateInput('multiplier', 'basic')">
                                 <button class="eq-btn" @click="calculateMultiplication">=</button>
+                                <button v-show="basic.results.multiplication && !basic.results.multiplication.includes('请输入')" class="verify-btn" :class="{ copied: copied.verifyMulti }" @click="verifyMultiplication">{{ copied.verifyMulti ? '已复制' : '验算' }}</button>
                             </div>
                             <div v-if="basic.multiplicand && basic.multiplier" class="result-row basic-result">
                                 <span class="result-text">{{ basic.results.multiplication || '结果：' }}</span>
@@ -725,6 +927,7 @@
                                 <span class="calc-operator">+</span>
                                 <input type="text" class="calc-input" v-model="basic.addend2" placeholder="加数2" @input="validateInput('addend2', 'basic')">
                                 <button class="eq-btn" @click="calculateAddition">=</button>
+                                <button v-show="basic.results.addition && !basic.results.addition.includes('请输入')" class="verify-btn" :class="{ copied: copied.verifyAdd }" @click="verifyAddition">{{ copied.verifyAdd ? '已复制' : '验算' }}</button>
                             </div>
                             <div v-if="basic.addend1 && basic.addend2" class="result-row basic-result">
                                 <span class="result-text">{{ basic.results.addition || '结果：' }}</span>
@@ -737,6 +940,7 @@
                                 <span class="calc-operator">−</span>
                                 <input type="text" class="calc-input" v-model="basic.subtrahend" placeholder="减数" @input="validateInput('subtrahend', 'basic')">
                                 <button class="eq-btn" @click="calculateSubtraction">=</button>
+                                <button v-show="basic.results.subtraction && !basic.results.subtraction.includes('请输入')" class="verify-btn" :class="{ copied: copied.verifySub }" @click="verifySubtraction">{{ copied.verifySub ? '已复制' : '验算' }}</button>
                             </div>
                             <div v-if="basic.minuend && basic.subtrahend" class="result-row basic-result">
                                 <span class="result-text">{{ basic.results.subtraction || '结果：' }}</span>
@@ -826,6 +1030,29 @@
                         <span class="result-text">{{ advanced.result }}</span>
                         <button class="copy-btn" @click="copyResult('expression')">{{ copied.expression ? '已复制' : '复制' }}</button>
                     </div>
+
+                    <!-- 可变算式 -->
+                    <div class="var-expr-section">
+                        <div class="var-expr-title">可变算式</div>
+                        <div class="var-expr-row">
+                            <template v-for="(input, index) in varExpr.inputs" :key="index">
+                                <input type="text" class="var-expr-input" v-model="input.value" @input="calculateVarExpr">
+                                <select v-if="index < varExpr.inputs.length - 1" class="var-expr-op" v-model="varExpr.operators[index]" @change="calculateVarExpr">
+                                    <option value="+">+</option>
+                                    <option value="-">−</option>
+                                    <option value="×">×</option>
+                                    <option value="÷">÷</option>
+                                </select>
+                            </template>
+                            <button class="eq-btn" @click="calculateVarExpr">=</button>
+                            <button class="add-input-btn" @click="addVarExprInput">+</button>
+                            <button v-if="varExpr.inputs.length > 3" class="remove-input-btn" @click="removeVarExprInput">−</button>
+                        </div>
+                        <div v-if="varExpr.result" class="result-row" style="margin-top: 8px; width: calc(100% - 60px); max-width: 500px;">
+                            <span class="result-text">{{ varExpr.result }}</span>
+                            <button class="copy-btn" @click="copyVarExprResult">{{ copied.varExpr ? '已复制' : '复制' }}</button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- 递等式模式 -->
@@ -878,6 +1105,20 @@
 
                         <!-- 符号大全页面 -->
                         <div v-show="currentNav === 'symbols'" class="symbols-page">
+                            <!-- 单选/多选切换 -->
+                            <div class="selection-mode">
+                                <div class="mode-tabs-wrapper">
+                                    <div class="mode-tabs">
+                                        <button :class="['mode-tab', { active: !multiSelectMode }]" @click="toggleMultiSelect(false)">单选</button>
+                                        <button :class="['mode-tab', { active: multiSelectMode }]" @click="toggleMultiSelect(true)">多选</button>
+                                    </div>
+                                </div>
+                                <div class="copy-selected-area">
+                                    <button v-if="multiSelectMode && selectedSymbols.length > 0" class="copy-all-btn" @click="copySelectedSymbols">
+                                        复制选中 ({{ selectedSymbols.length }})
+                                    </button>
+                                </div>
+                            </div>
                             <div class="symbols-panel">
                                 <div class="symbols-sidebar">
                                     <div v-for="(cat, index) in symbolCategories" 
@@ -894,16 +1135,17 @@
                                                 <span v-for="(sym, symIndex) in cat.symbols.slice(10)" 
                                                       :key="symIndex" 
                                                       class="symbol-item"
-                                                      :class="{ copied: lastCopiedSymbol === sym }"
-                                                      @click="copySymbol(sym)">
-                                                    {{ lastCopiedSymbol === sym ? '✓' : sym }}
+                                                      :class="{ copied: lastCopiedSymbol === sym, selected: multiSelectMode && selectedSymbols.includes(sym) }"
+                                                      @click="handleSymbolClick(sym)">
+                                                    {{ sym }}
                                                 </span>
                                             </div>
                                             <div class="symbol-grid">
                                                 <span v-for="(sym, symIndex) in cat.symbols.slice(0, 10)" 
                                                       :key="symIndex" 
                                                       class="symbol-item"
-                                                      @click="copySymbol(sym)">
+                                                      :class="{ selected: multiSelectMode && selectedSymbols.includes(sym) }"
+                                                      @click="handleSymbolClick(sym)">
                                                     {{ sym }}
                                                 </span>
                                             </div>
@@ -913,9 +1155,9 @@
                                                 <span v-for="(sym, symIndex) in cat.symbols" 
                                                       :key="symIndex" 
                                                       class="symbol-item"
-                                                      :class="{ copied: lastCopiedSymbol === sym }"
-                                                      @click="copySymbol(sym)">
-                                                    {{ lastCopiedSymbol === sym ? '✓' : sym }}
+                                                      :class="{ copied: lastCopiedSymbol === sym, selected: multiSelectMode && selectedSymbols.includes(sym) }"
+                                                      @click="handleSymbolClick(sym)">
+                                                    {{ sym }}
                                                 </span>
                                             </div>
                                         </template>
@@ -942,6 +1184,8 @@
                         { name: '数学/单位', symbols: ['π','°','℃','||','%','±','≈','≠','∞','~','∴','∵','∏','′','″','↑','↓','←','→','·'] },
                         { name: '上下角标', symbols: ['₀','₁','₂','₃','₄','₅','₆','₇','₈','₉','⁰','¹','²','³','⁴','⁵','⁶','⁷','⁸','⁹'] }
                     ],
+                    multiSelectMode: false,
+                    selectedSymbols: [],
                     copied: {
                         division: false,
                         multiplication: false,
@@ -949,7 +1193,12 @@
                         subtraction: false,
                         expression: false,
                         equation: false,
-                        eq: false
+                        eq: false,
+                        verify: false,
+                        verifyMulti: false,
+                        verifyAdd: false,
+                        verifySub: false,
+                        varExpr: false
                     },
                     basic: {
                         dividend: '',
@@ -969,6 +1218,11 @@
                     },
                     advanced: {
                         expression: '',
+                        result: ''
+                    },
+                    varExpr: {
+                        inputs: [{ value: '' }, { value: '' }, { value: '' }],
+                        operators: ['+', '+'],
                         result: ''
                     },
                     equation: {
@@ -1089,6 +1343,34 @@
                             }, 1500);
                         });
                     },
+                    handleSymbolClick(symbol) {
+                        if (this.multiSelectMode) {
+                            const index = this.selectedSymbols.indexOf(symbol);
+                            if (index > -1) {
+                                this.selectedSymbols.splice(index, 1);
+                            } else {
+                                this.selectedSymbols.push(symbol);
+                            }
+                        } else {
+                            this.copySymbol(symbol);
+                        }
+                    },
+                    toggleMultiSelect(mode) {
+                        this.multiSelectMode = mode;
+                        if (!mode) {
+                            this.selectedSymbols = [];
+                        }
+                    },
+                    copySelectedSymbols() {
+                        const text = this.selectedSymbols.join('');
+                        navigator.clipboard.writeText(text).then(() => {
+                            this.selectedSymbols = [];
+                            this.lastCopiedSymbol = 'multi';
+                            setTimeout(() => {
+                                this.lastCopiedSymbol = '';
+                            }, 1500);
+                        });
+                    },
                     clearAll() {
                     if (this.activeTab === 'basic') {
                         this.basic.dividend = '';
@@ -1111,6 +1393,9 @@
                         this.selectedUnit1 = '长度面积';
                         this.selectedUnit2 = '重量容积时间';
                         this.selectedUnit3 = '其他常用';
+                        this.varExpr.inputs = [{ value: '' }, { value: '' }, { value: '' }];
+                        this.varExpr.operators = ['+', '+'];
+                        this.varExpr.result = '';
                     } else if (this.activeTab === 'equation') {
                         this.equation.expression = '';
                         this.equation.result = '';
@@ -1146,6 +1431,86 @@
                     }
                     
                     this.basic.results.division = expression;
+                },
+                verifyDivision() {
+                    const dividend = parseFloat(this.basic.dividend);
+                    const divisor = parseFloat(this.basic.divisor);
+                    
+                    if (isNaN(dividend) || isNaN(divisor) || divisor === 0) {
+                        return;
+                    }
+
+                    const quotient = Math.floor(dividend / divisor);
+                    let remainder = dividend % divisor;
+                    remainder = parseFloat(remainder.toFixed(10));
+                    
+                    let verifyExpr;
+                    if (Math.abs(remainder) > 0.0000000001) {
+                        verifyExpr = `${quotient} × ${divisor} + ${this.formatNumber(remainder)} = ${dividend}`;
+                    } else {
+                        verifyExpr = `${quotient} × ${divisor} = ${dividend}`;
+                    }
+                    
+                    navigator.clipboard.writeText(verifyExpr).then(() => {
+                        this.copied.verify = true;
+                        setTimeout(() => {
+                            this.copied.verify = false;
+                        }, 2000);
+                    });
+                },
+                verifyMultiplication() {
+                    const multiplicand = parseFloat(this.basic.multiplicand);
+                    const multiplier = parseFloat(this.basic.multiplier);
+                    
+                    if (isNaN(multiplicand) || isNaN(multiplier)) {
+                        return;
+                    }
+
+                    const result = multiplicand * multiplier;
+                    const verifyExpr = `${multiplier} × ${multiplicand} = ${this.formatNumber(result)}`;
+                    
+                    navigator.clipboard.writeText(verifyExpr).then(() => {
+                        this.copied.verifyMulti = true;
+                        setTimeout(() => {
+                            this.copied.verifyMulti = false;
+                        }, 2000);
+                    });
+                },
+                verifyAddition() {
+                    const addend1 = parseFloat(this.basic.addend1);
+                    const addend2 = parseFloat(this.basic.addend2);
+                    
+                    if (isNaN(addend1) || isNaN(addend2)) {
+                        return;
+                    }
+
+                    const result = addend1 + addend2;
+                    const verifyExpr = `${this.formatNumber(result)} − ${addend2} = ${addend1}`;
+                    
+                    navigator.clipboard.writeText(verifyExpr).then(() => {
+                        this.copied.verifyAdd = true;
+                        setTimeout(() => {
+                            this.copied.verifyAdd = false;
+                        }, 2000);
+                    });
+                },
+                verifySubtraction() {
+                    const minuend = parseFloat(this.basic.minuend);
+                    const subtrahend = parseFloat(this.basic.subtrahend);
+                    
+                    if (isNaN(minuend) || isNaN(subtrahend)) {
+                        return;
+                    }
+
+                    const result = minuend - subtrahend;
+                    const verifyExpr = `${this.formatNumber(result)} + ${subtrahend} = ${minuend}`;
+                    
+                    navigator.clipboard.writeText(verifyExpr).then(() => {
+                        this.copied.verifySub = true;
+                        setTimeout(() => {
+                            this.copied.verifySub = false;
+                        }, 2000);
+                    });
                 },
                 calculateMultiplication() {
                     const multiplicand = parseFloat(this.basic.multiplicand);
@@ -1427,6 +1792,63 @@ const expression = `结果：${displayExpr} ＝ ${this.formatNumber(result)}`;
                         this.addToHistory(text);
                         setTimeout(() => {
                             this.copied[type] = false;
+                        }, 2000);
+                    });
+                },
+                addVarExprInput() {
+                    this.varExpr.inputs.push({ value: '' });
+                    this.varExpr.operators.push('+');
+                },
+                removeVarExprInput() {
+                    if (this.varExpr.inputs.length > 1) {
+                        this.varExpr.inputs.pop();
+                        this.varExpr.operators.pop();
+                        this.calculateVarExpr();
+                    }
+                },
+                calculateVarExpr() {
+                    const validInputs = this.varExpr.inputs.filter(input => input.value.trim() !== '');
+                    if (validInputs.length < 2) {
+                        this.varExpr.result = '';
+                        return;
+                    }
+
+                    let expr = '';
+                    let displayExpr = '';
+                    for (let i = 0; i < this.varExpr.inputs.length; i++) {
+                        const val = this.varExpr.inputs[i].value.trim();
+                        if (val === '') {
+                            this.varExpr.result = '请填写所有数字';
+                            return;
+                        }
+                        if (!/^-?\d+\.?\d*$/.test(val)) {
+                            this.varExpr.result = '请输入有效数字';
+                            return;
+                        }
+                        expr += val;
+                        displayExpr += val;
+                        if (i < this.varExpr.operators.length) {
+                            expr += this.varExpr.operators[i];
+                            displayExpr += ' ' + this.varExpr.operators[i] + ' ';
+                        }
+                    }
+
+                    try {
+                        const result = this.safeEvaluate(expr);
+                        const formattedResult = this.formatNumber(result);
+                        this.varExpr.result = `结果：${displayExpr} ＝ ${formattedResult}`;
+                    } catch (e) {
+                        this.varExpr.result = '计算错误';
+                    }
+                },
+                copyVarExprResult() {
+                    const text = this.varExpr.result.replace('结果：', '');
+                    if (!text) return;
+                    navigator.clipboard.writeText(text).then(() => {
+                        this.copied.varExpr = true;
+                        this.addToHistory(text);
+                        setTimeout(() => {
+                            this.copied.varExpr = false;
                         }, 2000);
                     });
                 },
@@ -1944,7 +2366,7 @@ const expression = `结果：${displayExpr} ＝ ${this.formatNumber(result)}`;
                 addToHistory(expression = '') {
                     if (expression && !this.history.includes(expression)) {
                         this.history.unshift(expression);
-                        if (this.history.length > 20) {
+                        if (this.history.length > 50) {
                             this.history.pop();
                         }
                     }

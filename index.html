@@ -1,11 +1,12 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>数学计算器</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✏️</text></svg>" type="image/svg+xml">
-    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js"></script>
+    <script src="js/vue.min.js"></script>
+    <script src="js/decimal.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -937,7 +938,7 @@
                             <!-- 减法 -->
                             <div class="calc-row">
                                 <input type="text" class="calc-input" v-model="basic.minuend" placeholder="被减数" @input="validateInput('minuend', 'basic')">
-                                <span class="calc-operator">−</span>
+                                <span class="calc-operator">-</span>
                                 <input type="text" class="calc-input" v-model="basic.subtrahend" placeholder="减数" @input="validateInput('subtrahend', 'basic')">
                                 <button class="eq-btn" @click="calculateSubtraction">=</button>
                                 <button v-show="basic.results.subtraction && !basic.results.subtraction.includes('请输入')" class="verify-btn" :class="{ copied: copied.verifySub }" @click="verifySubtraction">{{ copied.verifySub ? '已复制' : '验算' }}</button>
@@ -1039,14 +1040,14 @@
                                 <input type="text" class="var-expr-input" v-model="input.value" @input="calculateVarExpr">
                                 <select v-if="index < varExpr.inputs.length - 1" class="var-expr-op" v-model="varExpr.operators[index]" @change="calculateVarExpr">
                                     <option value="+">+</option>
-                                    <option value="-">−</option>
+                                    <option value="-">-</option>
                                     <option value="×">×</option>
                                     <option value="÷">÷</option>
                                 </select>
                             </template>
                             <button class="eq-btn" @click="calculateVarExpr">=</button>
                             <button class="add-input-btn" @click="addVarExprInput">+</button>
-                            <button v-if="varExpr.inputs.length > 3" class="remove-input-btn" @click="removeVarExprInput">−</button>
+                            <button v-if="varExpr.inputs.length > 3" class="remove-input-btn" @click="removeVarExprInput">-</button>
                         </div>
                         <div v-if="varExpr.result" class="result-row" style="margin-top: 8px; width: calc(100% - 60px); max-width: 500px;">
                             <span class="result-text">{{ varExpr.result }}</span>
@@ -1170,6 +1171,14 @@
     </div>
 
     <script>
+        // Decimal 全局配置
+        Decimal.set({
+            precision: 20,
+            rounding: Decimal.ROUND_HALF_UP,
+            toExpNeg: -7,
+            toExpPos: 21
+        });
+
         new Vue({
             el: '#app',
             data() {
@@ -1233,7 +1242,7 @@
                         eqResult: ''
                     },
                     focusedInput: '',
-                    operators: ['+', '−', '×', '÷'],
+                    operators: ['+', '-', '×', '÷'],
                     history: [],
                     copiedHistory: [],
                     selectedUnit1: '长度面积',
@@ -1244,9 +1253,20 @@
             },
             methods: {
                 formatNumber(num) {
+                    if (num instanceof Decimal) {
+                        if (num.isInteger()) return num.toString();
+                        return num.toDecimalPlaces(12).toString().replace(/\.?0+$/, '');
+                    }
                     if (typeof num !== 'number') return num;
                     if (Number.isInteger(num)) return num.toString();
                     return parseFloat(num.toPrecision(12)).toString();
+                },
+                sanitizeExpression(expr) {
+                    return expr.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-');
+                },
+                formatDisplayExpr(expr) {
+                    const fullWidthExpr = expr.replace(/=/g, '＝');
+                    return fullWidthExpr.replace(/(\d)\(/g, '$1 × (');
                 },
                 safeEvaluate(expr) {
                     // 处理隐式乘法：数字后跟括号 或 括号后跟括号
@@ -1262,7 +1282,7 @@
                                 num += expr[i++];
                             }
                             if ((num.match(/\./g) || []).length > 1) throw new Error('数字格式不正确');
-                            tokens.push({ type: 'number', value: parseFloat(num) });
+                            tokens.push({ type: 'number', value: new Decimal(num) });
                         } else if ('+−-×÷*/()[]'.includes(expr[i])) {
                             tokens.push({ type: 'op', value: expr[i++] });
                         } else {
@@ -1279,7 +1299,7 @@
                         while (peek() && peek().type === 'op' && (peek().value === '+' || peek().value === '−' || peek().value === '-')) {
                             const op = consume().value;
                             const right = parseTerm();
-                            left = op === '+' ? left + right : left - right;
+                            left = op === '+' ? left.plus(right) : left.minus(right);
                         }
                         return left;
                     };
@@ -1290,10 +1310,10 @@
                             const op = consume().value;
                             const right = parseFactor();
                             if (op === '÷' || op === '/') {
-                                if (right === 0) throw new Error('除数不能为0');
-                                left /= right;
+                                if (right.isZero()) throw new Error('除数不能为0');
+                                left = left.div(right);
                             } else {
-                                left *= right;
+                                left = left.times(right);
                             }
                         }
                         return left;
@@ -1304,7 +1324,7 @@
                         if (peek().value === '+' || peek().value === '-' || peek().value === '−') {
                             const op = consume().value;
                             const factor = parseFactor();
-                            return op === '+' ? factor : -factor;
+                            return op === '+' ? factor : factor.times(-1);
                         }
                         if (peek().type === 'number') return consume().value;
                         if (peek().value === '(' || peek().value === '[') {
@@ -1321,7 +1341,7 @@
 
                     const result = parseExpression();
                     if (pos !== tokens.length) throw new Error('表达式格式错误');
-                    if (!isFinite(result)) throw new Error('计算结果无效');
+                    if (!result.isFinite()) throw new Error('计算结果无效');
                     return result;
                 },
                 onUnitChange(selected) {
@@ -1336,13 +1356,8 @@
                     this.validateAndCalculate();
                 },
                 copySymbol(symbol) {
-                        navigator.clipboard.writeText(symbol).then(() => {
-                            this.lastCopiedSymbol = symbol;
-                            setTimeout(() => {
-                                this.lastCopiedSymbol = '';
-                            }, 1500);
-                        });
-                    },
+                    this.copyToClipboard(symbol, 'symbol');
+                },
                     handleSymbolClick(symbol) {
                         if (this.multiSelectMode) {
                             const index = this.selectedSymbols.indexOf(symbol);
@@ -1363,13 +1378,8 @@
                     },
                     copySelectedSymbols() {
                         const text = this.selectedSymbols.join('');
-                        navigator.clipboard.writeText(text).then(() => {
-                            this.selectedSymbols = [];
-                            this.lastCopiedSymbol = 'multi';
-                            setTimeout(() => {
-                                this.lastCopiedSymbol = '';
-                            }, 1500);
-                        });
+                        this.copyToClipboard(text, 'symbol');
+                        this.selectedSymbols = [];
                     },
                     clearAll() {
                     if (this.activeTab === 'basic') {
@@ -1405,26 +1415,27 @@
                     }
                 },
                 calculateDivision() {
-                    const dividend = parseFloat(this.basic.dividend);
-                    const divisor = parseFloat(this.basic.divisor);
+                    const dividendStr = this.basic.dividend;
+                    const divisorStr = this.basic.divisor;
                     
-                    if (isNaN(dividend) || isNaN(divisor)) {
+                    if (!dividendStr || !divisorStr) {
                         this.basic.results.division = '结果：请输入有效数字';
                         return;
                     }
                     
-                    if (divisor === 0) {
+                    const dividend = new Decimal(dividendStr);
+                    const divisor = new Decimal(divisorStr);
+                    
+                    if (divisor.isZero()) {
                         this.basic.results.division = '结果：除数不能为0';
                         return;
                     }
 
-                    const quotient = Math.floor(dividend / divisor);
-                    let remainder = dividend % divisor;
+                    const quotient = dividend.div(divisor).floor();
+                    const remainder = dividend.minus(quotient.times(divisor));
                     let expression;
                     
-                    remainder = parseFloat(remainder.toFixed(10));
-                    
-                    if (Math.abs(remainder) > 0.0000000001) {
+                    if (remainder.abs().gt(0.0000000001)) {
                         expression = `结果：${dividend} ÷ ${divisor} = ${this.formatNumber(quotient)}......${this.formatNumber(remainder)}`;
                     } else {
                         expression = `结果：${dividend} ÷ ${divisor} = ${this.formatNumber(quotient)}`;
@@ -1433,122 +1444,126 @@
                     this.basic.results.division = expression;
                 },
                 verifyDivision() {
-                    const dividend = parseFloat(this.basic.dividend);
-                    const divisor = parseFloat(this.basic.divisor);
+                    const dividendStr = this.basic.dividend;
+                    const divisorStr = this.basic.divisor;
                     
-                    if (isNaN(dividend) || isNaN(divisor) || divisor === 0) {
+                    if (!dividendStr || !divisorStr) {
+                        return;
+                    }
+                    
+                    const dividend = new Decimal(dividendStr);
+                    const divisor = new Decimal(divisorStr);
+                    
+                    if (divisor.isZero()) {
                         return;
                     }
 
-                    const quotient = Math.floor(dividend / divisor);
-                    let remainder = dividend % divisor;
-                    remainder = parseFloat(remainder.toFixed(10));
+                    const quotient = dividend.div(divisor).floor();
+                    const remainder = dividend.minus(quotient.times(divisor));
                     
                     let verifyExpr;
-                    if (Math.abs(remainder) > 0.0000000001) {
+                    if (remainder.abs().gt(0.0000000001)) {
                         verifyExpr = `${quotient} × ${divisor} + ${this.formatNumber(remainder)} = ${dividend}`;
                     } else {
                         verifyExpr = `${quotient} × ${divisor} = ${dividend}`;
                     }
                     
-                    navigator.clipboard.writeText(verifyExpr).then(() => {
-                        this.copied.verify = true;
-                        setTimeout(() => {
-                            this.copied.verify = false;
-                        }, 2000);
-                    });
+                    this.copyToClipboard(verifyExpr, 'verify');
                 },
                 verifyMultiplication() {
-                    const multiplicand = parseFloat(this.basic.multiplicand);
-                    const multiplier = parseFloat(this.basic.multiplier);
+                    const multiplicandStr = this.basic.multiplicand;
+                    const multiplierStr = this.basic.multiplier;
                     
-                    if (isNaN(multiplicand) || isNaN(multiplier)) {
+                    if (!multiplicandStr || !multiplierStr) {
                         return;
                     }
+                    
+                    const multiplicand = new Decimal(multiplicandStr);
+                    const multiplier = new Decimal(multiplierStr);
 
-                    const result = multiplicand * multiplier;
+                    const result = multiplicand.times(multiplier);
                     const verifyExpr = `${multiplier} × ${multiplicand} = ${this.formatNumber(result)}`;
                     
-                    navigator.clipboard.writeText(verifyExpr).then(() => {
-                        this.copied.verifyMulti = true;
-                        setTimeout(() => {
-                            this.copied.verifyMulti = false;
-                        }, 2000);
-                    });
+                    this.copyToClipboard(verifyExpr, 'verifyMulti');
                 },
                 verifyAddition() {
-                    const addend1 = parseFloat(this.basic.addend1);
-                    const addend2 = parseFloat(this.basic.addend2);
+                    const addend1Str = this.basic.addend1;
+                    const addend2Str = this.basic.addend2;
                     
-                    if (isNaN(addend1) || isNaN(addend2)) {
+                    if (!addend1Str || !addend2Str) {
                         return;
                     }
-
-                    const result = addend1 + addend2;
-                    const verifyExpr = `${this.formatNumber(result)} − ${addend2} = ${addend1}`;
                     
-                    navigator.clipboard.writeText(verifyExpr).then(() => {
-                        this.copied.verifyAdd = true;
-                        setTimeout(() => {
-                            this.copied.verifyAdd = false;
-                        }, 2000);
-                    });
+                    const addend1 = new Decimal(addend1Str);
+                    const addend2 = new Decimal(addend2Str);
+
+                    const result = addend1.plus(addend2);
+                    const verifyExpr = `${this.formatNumber(result)} - ${addend2} = ${addend1}`;
+                    
+                    this.copyToClipboard(verifyExpr, 'verifyAdd');
                 },
                 verifySubtraction() {
-                    const minuend = parseFloat(this.basic.minuend);
-                    const subtrahend = parseFloat(this.basic.subtrahend);
+                    const minuendStr = this.basic.minuend;
+                    const subtrahendStr = this.basic.subtrahend;
                     
-                    if (isNaN(minuend) || isNaN(subtrahend)) {
+                    if (!minuendStr || !subtrahendStr) {
                         return;
                     }
+                    
+                    const minuend = new Decimal(minuendStr);
+                    const subtrahend = new Decimal(subtrahendStr);
 
-                    const result = minuend - subtrahend;
+                    const result = minuend.minus(subtrahend);
                     const verifyExpr = `${this.formatNumber(result)} + ${subtrahend} = ${minuend}`;
                     
-                    navigator.clipboard.writeText(verifyExpr).then(() => {
-                        this.copied.verifySub = true;
-                        setTimeout(() => {
-                            this.copied.verifySub = false;
-                        }, 2000);
-                    });
+                    this.copyToClipboard(verifyExpr, 'verifySub');
                 },
                 calculateMultiplication() {
-                    const multiplicand = parseFloat(this.basic.multiplicand);
-                    const multiplier = parseFloat(this.basic.multiplier);
+                    const multiplicandStr = this.basic.multiplicand;
+                    const multiplierStr = this.basic.multiplier;
                     
-                    if (isNaN(multiplicand) || isNaN(multiplier)) {
+                    if (!multiplicandStr || !multiplierStr) {
                         this.basic.results.multiplication = '结果：请输入有效数字';
                         return;
                     }
+                    
+                    const multiplicand = new Decimal(multiplicandStr);
+                    const multiplier = new Decimal(multiplierStr);
 
-                    const result = multiplicand * multiplier;
+                    const result = multiplicand.times(multiplier);
                     const expression = `结果：${multiplicand} × ${multiplier} = ${this.formatNumber(result)}`;
                     this.basic.results.multiplication = expression;
                 },
                 calculateAddition() {
-                    const addend1 = parseFloat(this.basic.addend1);
-                    const addend2 = parseFloat(this.basic.addend2);
+                    const addend1Str = this.basic.addend1;
+                    const addend2Str = this.basic.addend2;
                     
-                    if (isNaN(addend1) || isNaN(addend2)) {
+                    if (!addend1Str || !addend2Str) {
                         this.basic.results.addition = '结果：请输入有效数字';
                         return;
                     }
+                    
+                    const addend1 = new Decimal(addend1Str);
+                    const addend2 = new Decimal(addend2Str);
 
-                    const result = addend1 + addend2;
+                    const result = addend1.plus(addend2);
                     const expression = `结果：${addend1} + ${addend2} = ${this.formatNumber(result)}`;
                     this.basic.results.addition = expression;
                 },
                 calculateSubtraction() {
-                    const minuend = parseFloat(this.basic.minuend);
-                    const subtrahend = parseFloat(this.basic.subtrahend);
+                    const minuendStr = this.basic.minuend;
+                    const subtrahendStr = this.basic.subtrahend;
                     
-                    if (isNaN(minuend) || isNaN(subtrahend)) {
+                    if (!minuendStr || !subtrahendStr) {
                         this.basic.results.subtraction = '结果：请输入有效数字';
                         return;
                     }
+                    
+                    const minuend = new Decimal(minuendStr);
+                    const subtrahend = new Decimal(subtrahendStr);
 
-                    const result = minuend - subtrahend;
-                    const expression = `结果：${minuend} − ${subtrahend} = ${this.formatNumber(result)}`;
+                    const result = minuend.minus(subtrahend);
+                    const expression = `结果：${minuend} - ${subtrahend} = ${this.formatNumber(result)}`;
                     this.basic.results.subtraction = expression;
                 },
                 appendToExpr(op) {
@@ -1652,7 +1667,7 @@
                     
                     const originalLength = this.advanced.expression.length;
                     // 将半角减号转换为全角减号
-                    this.advanced.expression = this.advanced.expression.replace(/-/g, '−').replace(/[^0-9+−*/×÷.()[\]]/g, '');
+                    this.advanced.expression = this.advanced.expression.replace(/[^0-9+\-*/×÷.()[\]]/g, '');
                     
                     if (input) {
                         const newLength = this.advanced.expression.length;
@@ -1679,11 +1694,9 @@
                     }
 
                     try {
-                        const sanitizedExpr = expr.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-');
+                        const sanitizedExpr = this.sanitizeExpression(expr);
                         const result = this.safeEvaluate(sanitizedExpr);
-                        const fullWidthExpr = expr.replace(/-/g, '−').replace(/=/g, '＝');
-                        // 在结果中显示隐式乘法的乘号
-const displayExpr = fullWidthExpr.replace(/(\d)\(/g, '$1 × (');
+                        const displayExpr = this.formatDisplayExpr(expr);
 const expression = `结果：${displayExpr} ＝ ${this.formatNumber(result)}`;
                         this.advanced.result = expression;
                     } catch (e) {
@@ -1704,11 +1717,9 @@ const expression = `结果：${displayExpr} ＝ ${this.formatNumber(result)}`;
                     }
 
                     try {
-                        const sanitizedExpr = expr.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-');
+                        const sanitizedExpr = this.sanitizeExpression(expr);
                         const result = this.safeEvaluate(sanitizedExpr);
-                        const fullWidthExpr = expr.replace(/-/g, '−').replace(/=/g, '＝');
-                        // 在结果中显示隐式乘法的乘号
-const displayExpr = fullWidthExpr.replace(/(\d)\(/g, '$1 × (');
+                        const displayExpr = this.formatDisplayExpr(expr);
 const expression = `结果：${displayExpr} ＝ ${this.formatNumber(result)}`;
                         this.advanced.result = expression;
                     } catch (e) {
@@ -1721,7 +1732,7 @@ const expression = `结果：${displayExpr} ＝ ${this.formatNumber(result)}`;
                         return { valid: false, message: '请输入表达式' };
                     }
                     
-                    const sanitized = expr.replace(/[×÷−]/g, (m) => ({ '×': '*', '÷': '/', '−': '-' }[m]));
+                    const sanitized = this.sanitizeExpression(expr);
                     
                     // 检查连续运算符
                     if (sanitized.includes('()') || sanitized.includes('[]')) {
@@ -1787,28 +1798,22 @@ const expression = `结果：${displayExpr} ＝ ${this.formatNumber(result)}`;
 
                     if (!text) return;
 
-                    navigator.clipboard.writeText(text).then(() => {
-                        this.copied[type] = true;
-                        this.addToHistory(text);
-                        setTimeout(() => {
-                            this.copied[type] = false;
-                        }, 2000);
-                    });
+                    this.copyToClipboard(text, type);
                 },
                 addVarExprInput() {
                     this.varExpr.inputs.push({ value: '' });
                     this.varExpr.operators.push('+');
                 },
                 removeVarExprInput() {
-                    if (this.varExpr.inputs.length > 1) {
+                    if (this.varExpr.inputs.length > 3) {
                         this.varExpr.inputs.pop();
                         this.varExpr.operators.pop();
                         this.calculateVarExpr();
                     }
                 },
                 calculateVarExpr() {
-                    const validInputs = this.varExpr.inputs.filter(input => input.value.trim() !== '');
-                    if (validInputs.length < 2) {
+                    const inputCount = this.varExpr.inputs.filter(input => input.value.trim() !== '').length;
+                    if (inputCount < 2) {
                         this.varExpr.result = '';
                         return;
                     }
@@ -1844,13 +1849,7 @@ const expression = `结果：${displayExpr} ＝ ${this.formatNumber(result)}`;
                 copyVarExprResult() {
                     const text = this.varExpr.result.replace('结果：', '');
                     if (!text) return;
-                    navigator.clipboard.writeText(text).then(() => {
-                        this.copied.varExpr = true;
-                        this.addToHistory(text);
-                        setTimeout(() => {
-                            this.copied.varExpr = false;
-                        }, 2000);
-                    });
+                    this.copyToClipboard(text, 'varExpr');
                 },
                 handleEquationInput() {
                     // 判断当前焦点在哪个输入框
@@ -1875,7 +1874,7 @@ const expression = `结果：${displayExpr} ＝ ${this.formatNumber(result)}`;
                         }
                     }
                     // 将半角减号转换为全角减号
-                    filtered = filtered.replace(/-/g, '−');
+                    // 不再转换减号，保持半角格式
                     
                     // 计算光标位置变化
                     let newExprCursorPos = exprCursorPos;
@@ -1910,7 +1909,7 @@ const expression = `结果：${displayExpr} ＝ ${this.formatNumber(result)}`;
                         }
                     }
                     // 将半角减号转换为全角减号
-                    eqFiltered = eqFiltered.replace(/-/g, '−');
+                    // 不再转换减号，保持半角格式
                     
                     // 计算光标位置变化
                     let newEqCursorPos = eqCursorPos;
@@ -1944,12 +1943,12 @@ const expression = `结果：${displayExpr} ＝ ${this.formatNumber(result)}`;
                     }
 
                     try {
-                        const sanitizedExpr = expr.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-');
+                        const sanitizedExpr = this.sanitizeExpression(expr);
                         const result = this.safeEvaluate(sanitizedExpr);
 
                         const steps = this.generateEquationSteps(expr, result);
                         // 将结果中的半角符号转换为全角符号
-                        const fullWidthSteps = steps.replace(/-/g, '−').replace(/=/g, '＝');
+                        const fullWidthSteps = steps.replace(/=/g, '＝');
                         this.equation.result = fullWidthSteps;
                     } catch (e) {
                         this.equation.result = '表达式不合规';
@@ -2000,7 +1999,7 @@ const expression = `结果：${displayExpr} ＝ ${this.formatNumber(result)}`;
 
                         // 提取变量系数和常数项（代入法）
                         const extractTerms = (side) => {
-                            const search = side.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-');
+                            const search = this.sanitizeExpression(side);
                             
                             // 在变量前插入*（处理隐式乘法：2x → 2*x, (x → *(x)
                             const insertMul = (expr, varName) => {
@@ -2018,7 +2017,7 @@ const expression = `结果：${displayExpr} ＝ ${this.formatNumber(result)}`;
                             const valWith0 = this.safeEvaluate(exprWith0);
                             
                             return {
-                                coef: valWith1 - valWith0,
+                                coef: valWith1.minus(valWith0),
                                 constVal: valWith0
                             };
                         };
@@ -2027,17 +2026,17 @@ const expression = `结果：${displayExpr} ＝ ${this.formatNumber(result)}`;
                         const rightTerms = extractTerms(processedRight);
 
                         // 净系数 = 左边系数 - 右边系数
-                        const netCoef = leftTerms.coef - rightTerms.coef;
+                        const netCoef = leftTerms.coef.minus(rightTerms.coef);
                         // 净常数 = 右边常数 - 左边常数
-                        const netConst = rightTerms.constVal - leftTerms.constVal;
+                        const netConst = rightTerms.constVal.minus(leftTerms.constVal);
 
-                        if (netCoef === 0) {
-                            this.equation.eqResult = netConst === 0 ? '方程有无数解' : '方程无解';
+                        if (netCoef.isZero()) {
+                            this.equation.eqResult = netConst.isZero() ? '方程有无数解' : '方程无解';
                             return;
                         }
 
-                        const solution = netConst / netCoef;
-                        const fullWidthResult = `解：${expr}\n${variable} ＝ ${this.formatNumber(solution)}`.replace(/-/g, '−');
+                        const solution = netConst.div(netCoef);
+                        const fullWidthResult = `解：${expr}\n${variable} ＝ ${this.formatNumber(solution)}`;
                         this.equation.eqResult = fullWidthResult;
                     } catch (e) {
                         this.equation.eqResult = '方程格式错误';
@@ -2088,14 +2087,14 @@ const expression = `结果：${displayExpr} ＝ ${this.formatNumber(result)}`;
                     }
 
                     // 逆分配律: a×b - a×c = a×(b-c)
-                    const distSubMatch = expr.match(/(\d+\.?\d*)\s*×\s*(\d+\.?\d*)\s*−\s*(\d+\.?\d*)\s*×\s*(\d+\.?\d*)/);
+                    const distSubMatch = expr.match(/(\d+\.?\d*)\s*×\s*(\d+\.?\d*)\s*-\s*(\d+\.?\d*)\s*×\s*(\d+\.?\d*)/);
                     if (distSubMatch) {
                         const a1 = parseFloat(distSubMatch[1]);
                         const b = parseFloat(distSubMatch[2]);
                         const a2 = parseFloat(distSubMatch[3]);
                         const c = parseFloat(distSubMatch[4]);
                         if (a1 === a2) {
-                            return `${a1}×(${b}−${c})`;
+                            return `${a1}×(${b}-${c})`;
                         }
                     }
 
@@ -2148,22 +2147,22 @@ const expression = `结果：${displayExpr} ＝ ${this.formatNumber(result)}`;
                     }
 
                     // 处理括号内的减法性质: (a-b-c) = (a-(b+c)) - 优先检查
-                    const parenSubMatch = expr.match(/\((\d+\.?\d*)\s*−\s*(\d+\.?\d*)\s*−\s*(\d+\.?\d*)\)/);
+                    const parenSubMatch = expr.match(/\((\d+\.?\d*)\s*-\s*(\d+\.?\d*)\s*-\s*(\d+\.?\d*)\)/);
                     if (parenSubMatch) {
                         const a = parseFloat(parenSubMatch[1]);
                         const b = parseFloat(parenSubMatch[2]);
                         const c = parseFloat(parenSubMatch[3]);
-                        const inner = `${a}−(${b}+${c})`;
-                        return expr.replace(/\((\d+\.?\d*)\s*−\s*(\d+\.?\d*)\s*−\s*(\d+\.?\d*)\)/, `(${inner})`);
+                        const inner = `${a}-(${b}+${c})`;
+                        return expr.replace(/\((\d+\.?\d*)\s*-\s*(\d+\.?\d*)\s*-\s*(\d+\.?\d*)\)/, `(${inner})`);
                     }
                     
                     // 减法性质: a-b-c = a-(b+c)（仅当不在括号内时应用）
-                    const subMatch = expr.match(/(?:^|[^)])\s*(\d+\.?\d*)\s*−\s*(\d+\.?\d*)\s*−\s*(\d+\.?\d*)(?![^(]*\))/);
+                    const subMatch = expr.match(/(?:^|[^)])\s*(\d+\.?\d*)\s*-\s*(\d+\.?\d*)\s*-\s*(\d+\.?\d*)(?![^(]*\))/);
                     if (subMatch) {
                         const a = parseFloat(subMatch[1]);
                         const b = parseFloat(subMatch[2]);
                         const c = parseFloat(subMatch[3]);
-                        return `${a}−(${b}+${c})`;
+                        return `${a}-(${b}+${c})`;
                     }
 
                     // 除法性质: a÷b÷c = a÷(b×c)
@@ -2244,6 +2243,9 @@ const expression = `结果：${displayExpr} ＝ ${this.formatNumber(result)}`;
                     let stepCount = 0;
                     const maxSteps = 10;
 
+                    // 规范化括号：将方括号转换为圆括号，使后续计算显示更统一
+                    currentExpr = currentExpr.replace(/\[/g, '(').replace(/\]/g, ')');
+
                     // 优先尝试简便计算
                     const simplified = this.trySimplify(currentExpr);
                     if (simplified && simplified !== currentExpr) {
@@ -2254,6 +2256,34 @@ const expression = `结果：${displayExpr} ＝ ${this.formatNumber(result)}`;
                         this.equation.hasSimplify = false;
                     }
 
+                    // 先处理括号内的运算（加减法）
+                    while (stepCount < maxSteps) {
+                        let matched = false;
+                        const parenAddRegex = /\(([^()]+)\)/;
+                        const parenMatch = currentExpr.match(parenAddRegex);
+
+                        if (parenMatch) {
+                            const innerExpr = parenMatch[1];
+                            const innerAddRegex = /(\d+\.?\d*)\s*([+-])\s*(\d+\.?\d*)/;
+                            const innerMatch = innerExpr.match(innerAddRegex);
+
+                            if (innerMatch) {
+                                const num1 = parseFloat(innerMatch[1]);
+                                const op = innerMatch[2];
+                                const num2 = parseFloat(innerMatch[3]);
+                                let partialResult = (op === '+') ? num1 + num2 : num1 - num2;
+                                let replaced = currentExpr.replace(parenAddRegex, this.formatNumber(partialResult));
+                                steps += `= ${replaced}\n`;
+                                currentExpr = replaced;
+                                matched = true;
+                                stepCount++;
+                            }
+                        }
+
+                        if (!matched) break;
+                    }
+
+                    // 再处理乘除法
                     while (stepCount < maxSteps) {
                         let matched = false;
                         const regex = /(\d+\.?\d*)\s*([×÷])\s*(\d+\.?\d*)/;
@@ -2276,7 +2306,7 @@ const expression = `结果：${displayExpr} ＝ ${this.formatNumber(result)}`;
                             matched = true;
                             stepCount++;
                         } else {
-                            const addRegex = /(\d+\.?\d*)\s*([+−])\s*(\d+\.?\d*)/;
+                            const addRegex = /(\d+\.?\d*)\s*([+-])\s*(\d+\.?\d*)/;
                             const addMatch = currentExpr.match(addRegex);
                             if (addMatch) {
                                 const num1 = parseFloat(addMatch[1]);
@@ -2371,11 +2401,37 @@ const expression = `结果：${displayExpr} ＝ ${this.formatNumber(result)}`;
                         }
                     }
                 },
+                copyToClipboard(text, type = 'default') {
+                    const vm = this;
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(text).then(function() {
+                            if (type !== 'history' && type !== 'symbol') {
+                                vm.$set(vm.copied, type, true);
+                                setTimeout(function() {
+                                    vm.$set(vm.copied, type, false);
+                                }, 2000);
+                            } else if (type === 'history') {
+                                // 历史记录特殊处理
+                            } else if (type === 'symbol') {
+                                vm.lastCopiedSymbol = text;
+                                setTimeout(function() {
+                                    vm.lastCopiedSymbol = '';
+                                }, 1500);
+                            }
+                            if (type !== 'symbol') {
+                                vm.addToHistory(text);
+                            }
+                        }).catch(function(err) {
+                            console.error('Clipboard API 复制失败:', err);
+                        });
+                    }
+                },
                 copyHistoryItem(item, index) {
+                    const vm = this;
                     navigator.clipboard.writeText(item).then(() => {
-                        this.$set(this.copiedHistory, index, true);
+                        vm.$set(vm.copiedHistory, index, true);
                         setTimeout(() => {
-                            this.$set(this.copiedHistory, index, false);
+                            vm.$set(vm.copiedHistory, index, false);
                         }, 2000);
                     });
                 },
